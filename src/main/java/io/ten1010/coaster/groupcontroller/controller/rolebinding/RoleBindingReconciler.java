@@ -92,6 +92,11 @@ public class RoleBindingReconciler implements Reconciler {
         this.rbacAuthorizationV1Api = rbacAuthorizationV1Api;
     }
 
+    /**
+     * Reconcile given role binding from {@link Request} to ensure its resource group, namespace, role and subjects.
+     * @param request the reconcile request, triggered by watch events
+     * @return the result
+     */
     @Override
     public Result reconcile(Request request) {
         return this.template.execute(
