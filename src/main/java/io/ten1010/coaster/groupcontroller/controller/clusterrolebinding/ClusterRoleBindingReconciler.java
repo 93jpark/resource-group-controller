@@ -89,6 +89,11 @@ public class ClusterRoleBindingReconciler implements Reconciler {
         this.rbacAuthorizationV1Api = rbacAuthorizationV1Api;
     }
 
+    /**
+     * Reconcile given cluster role binding from {@link Request} to ensure its resource group, namespace, cluster role and subjects.
+     * @param request the reconcile request, triggered by watch events
+     * @return the result
+     */
     @Override
     public Result reconcile(Request request) {
         return this.template.execute(
