@@ -18,8 +18,10 @@ public class Reconciliation {
         if (existingAffinity == null) {
             List<V1NodeSelectorRequirement> reconciledExpressions = reconcileMatchExpressions(new ArrayList<>(), groups);
             if (reconciledExpressions == null) {
+                System.out.println("check1");
                 return Optional.empty();
             }
+            System.out.println("check2");
             return Optional.of(new V1AffinityBuilder()
                     .withNewNodeAffinity()
                     .withNewRequiredDuringSchedulingIgnoredDuringExecution()
@@ -34,8 +36,10 @@ public class Reconciliation {
         if (existingAffinity.getNodeAffinity() == null) {
             List<V1NodeSelectorRequirement> reconciledExpressions = reconcileMatchExpressions(new ArrayList<>(), groups);
             if (reconciledExpressions == null) {
+                System.out.println("check3");
                 return Optional.of(builder.build());
             }
+            System.out.println("check4");
             return Optional.of(builder
                     .withNewNodeAffinity()
                     .withNewRequiredDuringSchedulingIgnoredDuringExecution()
@@ -49,8 +53,10 @@ public class Reconciliation {
         if (existingAffinity.getNodeAffinity().getRequiredDuringSchedulingIgnoredDuringExecution() == null) {
             List<V1NodeSelectorRequirement> reconciledExpressions = reconcileMatchExpressions(new ArrayList<>(), groups);
             if (reconciledExpressions == null) {
+                System.out.println("check5");
                 return Optional.of(builder.build());
             }
+            System.out.println("check6");
             return Optional.of(new V1AffinityBuilder(existingAffinity)
                     .editNodeAffinity()
                     .withNewRequiredDuringSchedulingIgnoredDuringExecution()
@@ -66,6 +72,7 @@ public class Reconciliation {
                         .withMatchExpressions(reconcileMatchExpressions(term.getMatchExpressions(), groups))
                         .build())
                 .collect(Collectors.toList());
+        System.out.println("check7");
         return Optional.of(builder
                 .editNodeAffinity()
                 .editRequiredDuringSchedulingIgnoredDuringExecution()
@@ -130,21 +137,30 @@ public class Reconciliation {
 
     @Nullable
     private static List<V1NodeSelectorRequirement> reconcileMatchExpressions(@Nullable List<V1NodeSelectorRequirement> existingExpressions, List<V1Beta1ResourceGroup> groups) {
-        if (groups.isEmpty()) {
-            return null;
-        }
-        if (existingExpressions == null) {
+//        if (groups.isEmpty()) {
+//            return null;
+//        }
+        System.out.println("IN reconcile match expression");
+        System.out.println();
+        if (existingExpressions.isEmpty()) {
+            System.out.println("rme 1");
             List<V1NodeSelectorRequirement> expressions = buildResourceGroupExclusiveMatchExpressions(groups);
             if (expressions.isEmpty()) {
+                System.out.println("rme 2");
                 return null;
             }
+            System.out.println("rme 3");
+            System.out.println(expressions);
             return expressions;
         }
         List<V1NodeSelectorRequirement> expressions = extractNonResourceGroupExclusiveMatchExpressions(existingExpressions);
         expressions.addAll(buildResourceGroupExclusiveMatchExpressions(groups));
         if (expressions.isEmpty()) {
+            System.out.println("rme 4");
             return null;
         }
+        System.out.println("rme 5");
+        System.out.println(expressions);
         return expressions;
     }
 
@@ -156,6 +172,9 @@ public class Reconciliation {
     }
 
     private static List<V1NodeSelectorRequirement> buildResourceGroupExclusiveMatchExpressions(List<V1Beta1ResourceGroup> groups) {
+//        if (groups.isEmpty()) {
+//            return List.of();
+//        }
         V1NodeSelectorRequirement expression = new V1NodeSelectorRequirementBuilder()
                 .withKey(Labels.KEY_RESOURCE_GROUP_EXCLUSIVE)
                 .withOperator("In")

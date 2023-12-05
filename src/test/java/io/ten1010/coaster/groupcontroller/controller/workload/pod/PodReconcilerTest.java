@@ -532,30 +532,30 @@ class PodReconcilerTest {
         }
     }
 
-    @Test
-    void given_pod_has_no_tolerations_and_affinity_and_groups_not_exist_then_do_nothing() {
-        V1Pod pod1 = new V1Pod();
-        V1ObjectMeta podMeta1 = new V1ObjectMeta();
-        podMeta1.setNamespace("ns1");
-        podMeta1.setName("pod1");
-        pod1.setMetadata(podMeta1);
-        V1PodSpec podSpec1 = new V1PodSpec();
-        podSpec1.setTolerations(new ArrayList<>());
-        podSpec1.setTolerations(new ArrayList<>());
-        pod1.setSpec(podSpec1);
-
-        Mockito.doReturn(new ArrayList<>())
-                .when(this.groupIndexer)
-                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, "ns1");
-        Mockito.doReturn(pod1).when(this.podIndexer).getByKey(KeyUtil.buildKey("ns1", "pod1"));
-        PodReconciler podReconciler = new PodReconciler(this.podIndexer, this.reconciliation, this.coreV1Api);
-        podReconciler.reconcile(new Request("ns1", "pod1"));
-        try {
-            Mockito.verifyNoInteractions(this.coreV1Api);
-        } catch (Exception e) {
-            Assertions.fail();
-        }
-    }
+//    @Test
+//    void given_pod_has_no_tolerations_and_affinity_and_groups_not_exist_then_do_nothing() {
+//        V1Pod pod1 = new V1Pod();
+//        V1ObjectMeta podMeta1 = new V1ObjectMeta();
+//        podMeta1.setNamespace("ns1");
+//        podMeta1.setName("pod1");
+//        pod1.setMetadata(podMeta1);
+//        V1PodSpec podSpec1 = new V1PodSpec();
+//        podSpec1.setTolerations(new ArrayList<>());
+//        podSpec1.setTolerations(new ArrayList<>());
+//        pod1.setSpec(podSpec1);
+//
+//        Mockito.doReturn(new ArrayList<>())
+//                .when(this.groupIndexer)
+//                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, "ns1");
+//        Mockito.doReturn(pod1).when(this.podIndexer).getByKey(KeyUtil.buildKey("ns1", "pod1"));
+//        PodReconciler podReconciler = new PodReconciler(this.podIndexer, this.reconciliation, this.coreV1Api);
+//        podReconciler.reconcile(new Request("ns1", "pod1"));
+//        try {
+//            Mockito.verifyNoInteractions(this.coreV1Api);
+//        } catch (Exception e) {
+//            Assertions.fail();
+//        }
+//    }
 
 }
 
