@@ -130,6 +130,9 @@ public class Reconciliation {
 
     @Nullable
     private static List<V1NodeSelectorRequirement> reconcileMatchExpressions(@Nullable List<V1NodeSelectorRequirement> existingExpressions, List<V1Beta1ResourceGroup> groups) {
+        if (groups.isEmpty()) {
+            return null;
+        }
         if (existingExpressions == null) {
             List<V1NodeSelectorRequirement> expressions = buildResourceGroupExclusiveMatchExpressions(groups);
             if (expressions.isEmpty()) {
