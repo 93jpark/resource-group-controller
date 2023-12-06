@@ -142,7 +142,7 @@ public class Reconciliation {
 //        }
         System.out.println("IN reconcile match expression");
         System.out.println();
-        if (existingExpressions.isEmpty()) {
+        if (existingExpressions == null) {
             System.out.println("rme 1");
             List<V1NodeSelectorRequirement> expressions = buildResourceGroupExclusiveMatchExpressions(groups);
             if (expressions.isEmpty()) {
