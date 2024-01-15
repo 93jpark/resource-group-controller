@@ -1,56 +1,61 @@
 = Resource Group Controller
 :github: https://github.com/ten1010-io/resource-group-controller
 
-== 개요
+== Abstract
 
-Resource Group Controller는 다음과 같은 기능을 제공하는 쿠버네티스 컨트롤러 입니다
 
-* 네임스페이스에 특정 노드를 전용 할당하는 작업의 자동화
-* 네임스페이스 관리자의 보편적인 권한을 가지는 Role, ClusterRole 생성 및 할당 자동화
+Resource Group Controller is Kubernetes controller which has below responsibilities.
 
-== 설치법
+* Automates task for allocating specific node based on namespace.
+* Automates creation and allocation of namespace administrator’s general rights of Role and ClusterRole.
 
-* Prerequisites
-** kubectl 사용 가능 상태
-** ClusterRole(cluster-admin) 권한
-** 직접 소스를 빌드하지 않고 Docker Hub에 배포된 이미지를 사용하려면 반드시 릴리즈 태그로 체크아웃 하세요
-*** 예: git checkout tags/v1.0.0
+== Installation
+
+
+* prerequisites
+** availability for usage of kubectl command
+** cluster admin authority for  ClusterRole
+
+** Check out image by release tags to pull from Docker Hub, not build sources directly.
+
+*** ie. git checkout tags/v1.0.0
 
 //-
 
-. 프로젝트 클론
+. project clone
 +
 ----
-git clone https://github.com/ten1010-io/resource-group-controller.git
+git clone https://github.com/ten1010-io/resource-group-controller
 cd resource-group-controller
 # checkout branch or tag you want to use
 # example: git checkout tags/v1.0.0
 ----
 
-. 빌드 (릴리즈 태그 체크아웃시 생략 가능)
-+
+. build source
 ----
 ./build-images.sh
-# distribute image to all nodes
+# must distribute image to all nodes on cluster
 ----
 
-. 인증서 설정 및 쿠버네티스에 배포
-+
+
+. setup up certificates and deploy on kubernetes cluster
 ----
-cd kubernetes/controller/cert
+cd kuberntes/controller/cert
 ./configure.sh
 cd ..
 kubectl apply -k .
 ----
 
-== 사용법
 
-모든 설정은 ResourceGroup 커스텀 리소스를 사용합니다.
 
-* case 1 : 네임스페이스에 노드 전용 할당하기
+== Usage
+
+
+All cases are discribed with ResourceGroup custom resource.
+
+* case 1 : restrics specific nodes to only be used in given namespaces
 +
-아래 예제는 ns1 네임스페이스에 node1 노드를 전용 할당합니다.
-+
+following example is for limit node1 only for namespace ns1.
 ----
 apiVersion: resource-group.ten1010.io/v1beta1
 kind: ResourceGroup
@@ -64,11 +69,11 @@ spec:
   subjects: []
 ----
 
-* case 2 : 데몬셋 등록하기
+* case 2 : register DaemonSet
 +
-특정 데몬셋의 팟이 그룹의 노드에 스케쥴링 되는 것을 허용합니다.
+following example is to make specific Pod of DaemonSet schedule on Resource Group’s Node.
 +
-네임스페이스와는 다르게 daemonSet 필드로 등록한 데몬셋에 대한 권한은 그룹의 subject에 할당되지 않습니다.
+Unlike namespaces, permissions for daemon sets defined in daemonSet field are not assigned to the subject of the Resource Group.
 +
 ----
 apiVersion: resource-group.ten1010.io/v1beta1
@@ -85,9 +90,9 @@ spec:
   subjects: []
 ----
 
-* case 3 : 네임스페이스 관리자 역할(Role) 생성 및 할당하기(RoleBinding)
+* case 3 : create and assign Role and RoleBinding of namespace administrator
 +
-아래 예제는 user1 유저에게 ns1 네임스페이스의 관리자 권한을 할당합니다.
+following example is for granting over namespace ns1 authority to User user1.
 +
 ----
 apiVersion: resource-group.ten1010.io/v1beta1
@@ -105,11 +110,13 @@ spec:
       name: "user1"
 ----
 
-== 자동 생성되는 역할
 
-ResourceGroup을 생성하면 그룹내 네임스페이의 관리자 역할(Role)이 자동 생성되며 subjects 필드에 존재하는 모든 subject에 할당됩니다.
 
-자동 생성되는 역할은 그룹 내 네임스페이스에 존재하는 아래와 같은 리소스의 CRUD 권한을 가집니다.
+== Automatically creating Role
+
+namespace administrator’s Role is automatically created for given Resource Group, when Resource Group is created, all existing subjects from subject field are assigned as well.
+
+Automade Role includes CRUD authorities against all below resources existing on namespaces managed by Resource Group.
 
 ----
 1. core api
@@ -138,7 +145,7 @@ ResourceGroup을 생성하면 그룹내 네임스페이의 관리자 역할(Role
     1. PodDisruptionBudget
 ----
 
-== 지원하는 workload controller
+== Supporting workload controller
 
 ----
 1. batch/CronJob
@@ -150,14 +157,16 @@ ResourceGroup을 생성하면 그룹내 네임스페이의 관리자 역할(Role
 7. apps/StatefulSet
 ----
 
-== 보안 취약점 리포팅
+== Reporting security vulnerability
 
-보안 취약점 발견시 *절대 이슈에 리포팅하지 마시고* hyeongdeok.yoon@ten1010.io으로 리포팅해주세요.
+DO NOT REPORT ON ISSUES.
 
-== 버그 리포팅 및 개선 사항, 질의
+Find any vulnerabiliity related with security, please report on hyeongdeok.yoon@ten1010.io.
 
-버그를 발견하시거나 개선 사항, 질의가 있다면 link:https://github.com/ten1010-io/resource-group-controller/issues[Github Issue]를 열어주세요.
+== Reporting Bug, suggesting improvement, or any questions
+
+Find any bug, any suggestions or questions, please open Github Issues.
 
 == License
 
-link:https://www.apache.org/licenses/LICENSE-2.0[Apache License, Version 2.0]
+Apache License, Version 2.0
