@@ -16,9 +16,9 @@ Resource Group Controller is Kubernetes controller which has below responsibilit
 ** availability for usage of kubectl command
 ** cluster admin authority for  ClusterRole
 
-** Check out image by release tags to pull from Docker Hub, not build sources directly.
+** Check out release tag to use pre-build image on DockerHub without building the sources directly.
 
-*** ie. git checkout tags/v1.0.0
+*** e.g. git checkout tags/v1.0.0
 
 //-
 
@@ -28,7 +28,7 @@ Resource Group Controller is Kubernetes controller which has below responsibilit
 git clone https://github.com/ten1010-io/resource-group-controller
 cd resource-group-controller
 # checkout branch or tag you want to use
-# example: git checkout tags/v1.0.0
+# e.g. git checkout tags/v1.0.0
 ----
 
 . build source
