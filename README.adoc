@@ -58,6 +58,7 @@ All cases describe with ResourceGroup custom resource.
 * case 1 : restricts specific nodes to only be used in given namespaces
 +
 The following example is for limit node1 only for namespace ns1.
++
 ----
 apiVersion: resource-group.ten1010.io/v1beta1
 kind: ResourceGroup
