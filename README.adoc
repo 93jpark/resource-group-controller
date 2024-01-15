@@ -7,14 +7,14 @@
 Resource Group Controller is Kubernetes controller which has below responsibilities.
 
 * Automates task for allocating specific node based on namespace.
-* Automates creation and allocation of namespace administrator’s general rights of Role and ClusterRole.
+* Automates creation and allocation of Role and ClusterRole for namespace administrator’s general authorities.
 
 == Installation
 
 
 * prerequisites
-** availability for usage of kubectl command
-** cluster admin authority for  ClusterRole
+** availability on kubectl command
+** cluster admin authority for ClusterRole
 
 ** Check out release tag to use pre-build image on DockerHub without building the sources directly.
 
@@ -22,7 +22,7 @@ Resource Group Controller is Kubernetes controller which has below responsibilit
 
 //-
 
-. project clone
+. Project clone
 +
 ----
 git clone https://github.com/ten1010-io/resource-group-controller
@@ -31,14 +31,16 @@ cd resource-group-controller
 # e.g. git checkout tags/v1.0.0
 ----
 
-. build source
+. Build source
++
 ----
 ./build-images.sh
 # must distribute image to all nodes on cluster
 ----
 
 
-. setup up certificates and deploy on kubernetes cluster
+. Setup up certificates and deploy on kubernetes cluster
++
 ----
 cd kuberntes/controller/cert
 ./configure.sh
@@ -51,11 +53,11 @@ kubectl apply -k .
 == Usage
 
 
-All cases are discribed with ResourceGroup custom resource.
+All cases describe with ResourceGroup custom resource.
 
-* case 1 : restrics specific nodes to only be used in given namespaces
+* case 1 : restricts specific nodes to only be used in given namespaces
 +
-following example is for limit node1 only for namespace ns1.
+The following example is for limit node1 only for namespace ns1.
 ----
 apiVersion: resource-group.ten1010.io/v1beta1
 kind: ResourceGroup
@@ -71,7 +73,7 @@ spec:
 
 * case 2 : register DaemonSet
 +
-following example is to make specific Pod of DaemonSet schedule on Resource Group’s Node.
+The following example is for letting specific Pod of DaemonSet schedules on Resource Group’s Node.
 +
 Unlike namespaces, permissions for daemon sets defined in daemonSet field are not assigned to the subject of the Resource Group.
 +
@@ -92,7 +94,7 @@ spec:
 
 * case 3 : create and assign Role and RoleBinding of namespace administrator
 +
-following example is for granting over namespace ns1 authority to User user1.
+The following example is for granting over namespace ns1 authority to User user1.
 +
 ----
 apiVersion: resource-group.ten1010.io/v1beta1
@@ -114,9 +116,9 @@ spec:
 
 == Automatically creating Role
 
-namespace administrator’s Role is automatically created for given Resource Group, when Resource Group is created, all existing subjects from subject field are assigned as well.
+Namespace administrator’s Role is automatically created for given Resource Group, when Resource Group is created, all existing subjects from subject field are assigned as well.
 
-Automade Role includes CRUD authorities against all below resources existing on namespaces managed by Resource Group.
+The automatically created Role includes CRUD authorities against all below resources existing on namespaces managed by Resource Group.
 
 ----
 1. core api
@@ -161,11 +163,11 @@ Automade Role includes CRUD authorities against all below resources existing on 
 
 DO NOT REPORT ON ISSUES.
 
-Find any vulnerabiliity related with security, please report on hyeongdeok.yoon@ten1010.io.
+Find any vulnerabilities related with security, please report on hyeongdeok.yoon@ten1010.io.
 
 == Reporting Bug, suggesting improvement, or any questions
 
-Find any bug, any suggestions or questions, please open Github Issues.
+Find any bugs, any suggestions or questions, please open Github Issues.
 
 == License
 
