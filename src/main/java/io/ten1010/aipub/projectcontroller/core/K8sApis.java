@@ -7,8 +7,7 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.apis.RbacAuthorizationV1Api;
 import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.util.generic.GenericKubernetesApi;
-import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
-import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroupList;
+import io.ten1010.aipub.projectcontroller.model.*;
 import lombok.Getter;
 
 @Getter
@@ -20,7 +19,11 @@ public class K8sApis {
     private BatchV1Api batchV1Api;
     private RbacAuthorizationV1Api rbacAuthorizationV1Api;
 
+    private GenericKubernetesApi<V1alpha1Project, V1alpha1ProjectList> projectApi;
     private GenericKubernetesApi<V1alpha1NodeGroup, V1alpha1NodeGroupList> nodeGroupApi;
+    private GenericKubernetesApi<V1alpha1NodeGroupBinding, V1alpha1NodeGroupBindingList> nodeGroupBindingApi;
+    private GenericKubernetesApi<V1alpha1ImageNamespaceGroup, V1alpha1ImageNamespaceGroupList> imageNamespaceGroupApi;
+    private GenericKubernetesApi<V1alpha1ImageNamespaceGroupBinding, V1alpha1ImageNamespaceGroupBindingList> imageNamespaceGroupBindingApi;
 
     private GenericKubernetesApi<V1CronJob, V1CronJobList> cronJobApi;
     private GenericKubernetesApi<V1DaemonSet, V1DaemonSetList> daemonSetApi;
@@ -37,6 +40,7 @@ public class K8sApis {
     private GenericKubernetesApi<V1ClusterRole, V1ClusterRoleList> clusterRoleApi;
     private GenericKubernetesApi<V1ClusterRoleBinding, V1ClusterRoleBindingList> clusterRoleBindingApi;
     private GenericKubernetesApi<V1Namespace, V1NamespaceList> namespaceApi;
+    private GenericKubernetesApi<V1Secret, V1SecretList> secretApi;
 
     public K8sApis(ApiClient apiClient) {
         this.apiClient = apiClient;
@@ -44,12 +48,40 @@ public class K8sApis {
         this.appsV1Api = new AppsV1Api(apiClient);
         this.batchV1Api = new BatchV1Api(apiClient);
         this.rbacAuthorizationV1Api = new RbacAuthorizationV1Api(apiClient);
+        this.projectApi = new GenericKubernetesApi<>(
+                V1alpha1Project.class,
+                V1alpha1ProjectList.class,
+                "project.aipub.ten1010.io",
+                "v1alpha1",
+                "projects",
+                apiClient);
         this.nodeGroupApi = new GenericKubernetesApi<>(
                 V1alpha1NodeGroup.class,
                 V1alpha1NodeGroupList.class,
                 "project.aipub.ten1010.io",
                 "v1alpha1",
                 "nodegroups",
+                apiClient);
+        this.nodeGroupBindingApi = new GenericKubernetesApi<>(
+                V1alpha1NodeGroupBinding.class,
+                V1alpha1NodeGroupBindingList.class,
+                "project.aipub.ten1010.io",
+                "v1alpha1",
+                "nodegroupbindings",
+                apiClient);
+        this.imageNamespaceGroupApi = new GenericKubernetesApi<>(
+                V1alpha1ImageNamespaceGroup.class,
+                V1alpha1ImageNamespaceGroupList.class,
+                "project.aipub.ten1010.io",
+                "v1alpha1",
+                "imagenamespacegroups",
+                apiClient);
+        this.imageNamespaceGroupBindingApi = new GenericKubernetesApi<>(
+                V1alpha1ImageNamespaceGroupBinding.class,
+                V1alpha1ImageNamespaceGroupBindingList.class,
+                "project.aipub.ten1010.io",
+                "v1alpha1",
+                "imagenamespacegroupbindings",
                 apiClient);
         this.cronJobApi = new GenericKubernetesApi<>(
                 V1CronJob.class,
@@ -149,6 +181,12 @@ public class K8sApis {
                 "v1",
                 "namespaces",
                 apiClient);
+        this.secretApi = new GenericKubernetesApi<>(
+                V1Secret.class,
+                V1SecretList.class,
+                "",
+                "v1",
+                "secrets");
     }
 
 }

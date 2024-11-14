@@ -15,7 +15,7 @@ import java.util.List;
 @Setter
 @EqualsAndHashCode
 @ToString
-public class V1alpha1PullSecretBindingList implements KubernetesListObject {
+public class V1alpha1ImageNamespaceGroupBindingList implements KubernetesListObject {
 
     @Nullable
     private String apiVersion;
@@ -23,9 +23,9 @@ public class V1alpha1PullSecretBindingList implements KubernetesListObject {
     private String kind;
     @Nullable
     private V1ListMeta metadata;
-    private List<V1alpha1PullSecretBinding> items;
+    private List<V1alpha1ImageNamespaceGroupBinding> items;
 
-    public V1alpha1PullSecretBindingList() {
+    public V1alpha1ImageNamespaceGroupBindingList() {
         this.items = new ArrayList<>();
     }
 

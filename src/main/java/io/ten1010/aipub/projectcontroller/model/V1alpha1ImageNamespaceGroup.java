@@ -16,7 +16,7 @@ import java.util.List;
 @Setter
 @EqualsAndHashCode
 @ToString
-public class V1alpha1PullSecret implements KubernetesObject {
+public class V1alpha1ImageNamespaceGroup implements KubernetesObject {
 
     @Nullable
     private String apiVersion;
@@ -26,9 +26,9 @@ public class V1alpha1PullSecret implements KubernetesObject {
     private V1ObjectMeta metadata;
     private List<String> aipubImageNamespaces;
     @Nullable
-    private V1TypedObjectReference pullSecret;
+    private V1TypedObjectReference secret;
 
-    public V1alpha1PullSecret() {
+    public V1alpha1ImageNamespaceGroup() {
         this.aipubImageNamespaces = new ArrayList<>();
     }
 
