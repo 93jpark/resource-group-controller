@@ -10,7 +10,7 @@ public final class ImagePullSecretUtil {
 
     private static final String PULL_SECRET_KEY = "pullSecret";
 
-    public static boolean isPullSecretEqual(V1Secret secret, String secretValue) {
+    public static boolean hasPullSecretData(V1Secret secret, String secretValue) {
         if (secret.getData() == null || secret.getData().get(PULL_SECRET_KEY) == null)  {
             return false;
         }
