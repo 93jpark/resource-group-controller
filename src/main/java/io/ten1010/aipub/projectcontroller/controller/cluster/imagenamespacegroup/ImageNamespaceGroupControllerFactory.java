@@ -31,7 +31,6 @@ public class ImageNamespaceGroupControllerFactory {
         this.imageNamespaceGroupIndexer = imageNamespaceGroupIndexer;
         this.secretIndexer = secretIndexer;
         this.imageNamespaceGroupApi = k8sApis.getImageNamespaceGroupApi();
-        this.coreV1Api = k8sApis.getCoreV1Api();
         this.registryRobotService = registryRobotService;
     }
 
@@ -45,7 +44,6 @@ public class ImageNamespaceGroupControllerFactory {
                         this.imageNamespaceGroupIndexer,
                         this.secretIndexer,
                         this.imageNamespaceGroupApi,
-                        this.coreV1Api,
                         this.registryRobotService))
                 .build();
     }

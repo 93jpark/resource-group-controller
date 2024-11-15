@@ -8,14 +8,10 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1TypedObjectReference;
 import io.ten1010.aipub.projectcontroller.controller.EventHandlerUtil;
-import io.ten1010.aipub.projectcontroller.core.IndexNames;
-import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 public class ImageNamespaceGroupWatch implements ControllerWatch<V1alpha1ImageNamespaceGroup> {
 
@@ -33,39 +29,21 @@ public class ImageNamespaceGroupWatch implements ControllerWatch<V1alpha1ImageNa
 
         @Override
         public void onAdd(V1alpha1ImageNamespaceGroup v1alpha1ImageNamespaceGroup) {
-            this.resolveToSecrets(K8sObjectUtil.getNamespace(v1alpha1ImageNamespaceGroup))
-                    .map(EventHandlerUtil::resolveNamespacedObjectToRequest)
-                    .forEach(this.queue::add);
+            this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(v1alpha1ImageNamespaceGroup));
         }
 
         @Override
         public void onUpdate(V1alpha1ImageNamespaceGroup oldObj, V1alpha1ImageNamespaceGroup newObj) {
-            if (!oldObj.getAipubImageNamespaces().equals(newObj.getAipubImageNamespaces())) {
-                this.resolveToSecrets(K8sObjectUtil.getNamespace(oldObj))
-                        .map(EventHandlerUtil::resolveNamespacedObjectToRequest)
-                        .forEach(this.queue::add);
-                return;
-            }
             Optional<V1TypedObjectReference> oldSecretOpt = Optional.ofNullable(oldObj.getSecret());
             Optional<V1TypedObjectReference> newSecretOpt = Optional.ofNullable(newObj.getSecret());
             if (!oldSecretOpt.equals(newSecretOpt)) {
-                this.resolveToSecrets(K8sObjectUtil.getNamespace(oldObj))
-                        .map(EventHandlerUtil::resolveNamespacedObjectToRequest)
-                        .forEach(this.queue::add);
+                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
                 return;
             }
         }
 
         @Override
         public void onDelete(V1alpha1ImageNamespaceGroup v1alpha1ImageNamespaceGroup, boolean deletedFinalStateUnknown) {
-            this.resolveToSecrets(K8sObjectUtil.getNamespace(v1alpha1ImageNamespaceGroup))
-                    .map(EventHandlerUtil::resolveNamespacedObjectToRequest)
-                    .forEach(this.queue::add);
-        }
-
-        private Stream<V1Secret> resolveToSecrets(String namespace) {
-            List<V1Secret> secrets = this.secretIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_SECRET_OBJECT, namespace);
-            return secrets.stream();
         }
 
     }

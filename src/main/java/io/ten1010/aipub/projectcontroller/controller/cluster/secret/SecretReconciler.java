@@ -6,6 +6,7 @@ import io.kubernetes.client.extended.controller.reconciler.Result;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1ObjectMetaBuilder;
 import io.kubernetes.client.openapi.models.V1OwnerReference;
 import io.kubernetes.client.openapi.models.V1Secret;
@@ -52,15 +53,8 @@ public class SecretReconciler implements Reconciler {
     public Result reconcile(Request request) {
         return this.template.execute(
                 () -> {
-                    String secretKey = KeyUtil.buildKey(request.getNamespace(), request.getName());
-                    Optional<V1Secret> secretOpt = Optional.ofNullable(secretIndexer.getByKey(secretKey));
-                    if (secretOpt.isEmpty()) {
-                        log.debug("Secret [{}] not founded while reconciling", secretKey);
-                        return new Result(false);
-                    }
-                    V1Secret secret = secretOpt.get();
                     String imageNamespaceGroupKey = KeyUtil.buildKey(request.getNamespace(), request.getName());
-                    Optional<V1alpha1ImageNamespaceGroup> imageNamespaceGroupOpt = Optional.ofNullable(this.imageNamespaceGroupIndexer.getByKey(imageNamespaceGroupKey));
+                    Optional<V1alpha1ImageNamespaceGroup> imageNamespaceGroupOpt = Optional.ofNullable(imageNamespaceGroupIndexer.getByKey(imageNamespaceGroupKey));
                     if (imageNamespaceGroupOpt.isEmpty()) {
                         return new Result(false);
                     }
@@ -75,16 +69,32 @@ public class SecretReconciler implements Reconciler {
                     }
                     RegistryRobot registryRobot = registryRobotOpt.get();
                     projectImageNamespaceGroup.setSecretValue(registryRobot.getSecret());
-
+                    String secretKey = KeyUtil.buildKey(request.getNamespace(), request.getName());
+                    Optional<V1Secret> secretOpt = Optional.ofNullable(secretIndexer.getByKey(secretKey));
+                    if (secretOpt.isEmpty()) {
+                        this.createNamespacedSecret(projectImageNamespaceGroup);
+                        log.debug("Secret [{}] created for ImageNamespaceGroup[{}] while reconciling", secretKey, imageNamespaceGroupKey);
+                        return new Result(false);
+                    }
+                    V1Secret secret = secretOpt.get();
                     if (!ImagePullSecretUtil.hasPullSecretData(secret, projectImageNamespaceGroup.getSecretValue())) {
                         this.updateNamespacedSecretValueAndOwnerRef(secret, ImagePullSecretUtil.castToBytes(projectImageNamespaceGroup.getSecretValue()), imageNamespaceGroup);
                         log.debug("Secret [{}] updated while reconciling", secretKey);
                         return new Result(false);
                     }
-
                     return new Result(false);
                 },
                 request);
+    }
+
+    private void createNamespacedSecret(ProjectImageNamespaceGroup projectImageNamespaceGroup) {
+        V1Secret secret = new V1Secret();
+        V1ObjectMeta objectMeta = new V1ObjectMeta();
+        objectMeta.setName(projectImageNamespaceGroup.getName());
+        objectMeta.setNamespace(projectImageNamespaceGroup.getNamespace());
+        secret.setMetadata(objectMeta);
+        ImagePullSecretUtil.applyNewSecretValue(secret, projectImageNamespaceGroup.getSecretValue().getBytes());
+        this.coreV1Api.createNamespacedSecret(projectImageNamespaceGroup.getNamespace(), secret);
     }
 
     private void updateNamespacedSecretValueAndOwnerRef(V1Secret target, byte[] secretValue, V1alpha1ImageNamespaceGroup imageNamespaceGroup) throws ApiException {
