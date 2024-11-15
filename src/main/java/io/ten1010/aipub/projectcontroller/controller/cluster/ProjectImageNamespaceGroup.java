@@ -26,7 +26,7 @@ public class ProjectImageNamespaceGroup {
 
     private String name;
     private String namespace;
-    private String robotAccountName;
+    private String registryRobotName;
     private List<String> imageNamespaces;
     private String secretValue;
     private V1TypedObjectReference secretRef;
@@ -39,10 +39,11 @@ public class ProjectImageNamespaceGroup {
                 .name(imageNamespaceGroup.getMetadata().getName())
                 .namespace(imageNamespaceGroup.getMetadata().getNamespace())
                 .imageNamespaces(imageNamespaceGroup.getAipubImageNamespaces())
+                .registryRobotName(KeyUtil.buildKey(imageNamespaceGroup.getMetadata().getNamespace(), imageNamespaceGroup.getMetadata().getName()))
                 .build();
     }
 
-    public String getRobotAccountName() {
+    public String getRegistryRobotName() {
         return KeyUtil.buildKey(this.namespace, this.name);
     }
 

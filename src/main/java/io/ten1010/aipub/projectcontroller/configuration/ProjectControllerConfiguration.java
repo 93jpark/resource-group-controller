@@ -7,7 +7,7 @@ import io.kubernetes.client.openapi.models.V1DaemonSet;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1Secret;
-import io.ten1010.aipub.projectcontroller.controller.cluster.RobotAccountService;
+import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotService;
 import io.ten1010.aipub.projectcontroller.controller.cluster.imagenamespacegroup.ImageNamespaceGroupControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cluster.nodegroup.NodeGroupControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cluster.secret.SecretControllerFactory;
@@ -44,14 +44,14 @@ public class ProjectControllerConfiguration {
     public Controller imageNamespaceGroupController(
             SharedInformerFactory sharedInformerFactory,
             K8sApis k8sApis,
-            RobotAccountService robotAccountService) {
+            RegistryRobotService registryRobotService) {
         Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1alpha1ImageNamespaceGroup.class)
                 .getIndexer();
         Indexer<V1Secret> secretIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1Secret.class)
                 .getIndexer();
-        return new ImageNamespaceGroupControllerFactory(sharedInformerFactory, imageNamespaceGroupIndexer, secretIndexer, k8sApis, robotAccountService)
+        return new ImageNamespaceGroupControllerFactory(sharedInformerFactory, imageNamespaceGroupIndexer, secretIndexer, k8sApis, registryRobotService)
                 .create();
     }
 
@@ -59,14 +59,14 @@ public class ProjectControllerConfiguration {
     public Controller secretController(
             SharedInformerFactory sharedInformerFactory,
             K8sApis k8sApis,
-            RobotAccountService robotAccountService) {
+            RegistryRobotService registryRobotService) {
         Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1alpha1ImageNamespaceGroup.class)
                 .getIndexer();
         Indexer<V1Secret> secretIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1Secret.class)
                 .getIndexer();
-        return new SecretControllerFactory(sharedInformerFactory, imageNamespaceGroupIndexer, secretIndexer, k8sApis, robotAccountService)
+        return new SecretControllerFactory(sharedInformerFactory, imageNamespaceGroupIndexer, secretIndexer, k8sApis, registryRobotService)
                 .create();
     }
 

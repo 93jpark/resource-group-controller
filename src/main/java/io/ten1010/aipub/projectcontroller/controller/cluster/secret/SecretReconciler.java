@@ -12,8 +12,8 @@ import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretBuilder;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
 import io.ten1010.aipub.projectcontroller.controller.cluster.ProjectImageNamespaceGroup;
-import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotAccount;
-import io.ten1010.aipub.projectcontroller.controller.cluster.RobotAccountService;
+import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobot;
+import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotService;
 import io.ten1010.aipub.projectcontroller.core.ImagePullSecretUtil;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
@@ -34,18 +34,18 @@ public class SecretReconciler implements Reconciler {
     private Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer;
     private Indexer<V1Secret> secretIndexer;
     private CoreV1Api coreV1Api;
-    private RobotAccountService robotAccountService;
+    private RegistryRobotService registryRobotService;
 
     public SecretReconciler(
             Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer,
             Indexer<V1Secret> secretIndexer,
             CoreV1Api coreV1Api,
-            RobotAccountService robotAccountService) {
+            RegistryRobotService registryRobotService) {
         this.template = new KubernetesApiReconcileExceptionHandlingTemplate(API_CONFLICT_REQUEUE_DURATION, API_FAIL_REQUEUE_DURATION);
         this.imageNamespaceGroupIndexer = imageNamespaceGroupIndexer;
         this.secretIndexer = secretIndexer;
         this.coreV1Api = coreV1Api;
-        this.robotAccountService = robotAccountService;
+        this.registryRobotService = registryRobotService;
     }
 
     @Override
@@ -68,13 +68,13 @@ public class SecretReconciler implements Reconciler {
                     Assert.notNull(imageNamespaceGroup.getMetadata(), "metadata must not be null");
                     Assert.notNull(imageNamespaceGroup.getMetadata().getName(), "name must not be null");
                     ProjectImageNamespaceGroup projectImageNamespaceGroup = ProjectImageNamespaceGroup.from(imageNamespaceGroup);
-                    Optional<RegistryRobotAccount> robotAccountOpt = robotAccountService.getRobotAccount(imageNamespaceGroup.getMetadata().getName());
-                    if (robotAccountOpt.isEmpty()) {
-                        log.debug("RobotAccount [{}] not founded while reconciling", imageNamespaceGroup.getMetadata().getName());
+                    Optional<RegistryRobot> registryRobotOpt = registryRobotService.getRegistryRobot(projectImageNamespaceGroup.getRegistryRobotName());
+                    if (registryRobotOpt.isEmpty()) {
+                        log.debug("RegistryRobot [{}] not founded while reconciling", projectImageNamespaceGroup.getRegistryRobotName());
                         return new Result(false);
                     }
-                    RegistryRobotAccount robotAccount = robotAccountOpt.get();
-                    projectImageNamespaceGroup.setSecretValue(robotAccount.getSecret());
+                    RegistryRobot registryRobot = registryRobotOpt.get();
+                    projectImageNamespaceGroup.setSecretValue(registryRobot.getSecret());
 
                     if (!ImagePullSecretUtil.hasPullSecretData(secret, projectImageNamespaceGroup.getSecretValue())) {
                         this.updateNamespacedSecretValueAndOwnerRef(secret, ImagePullSecretUtil.castToBytes(projectImageNamespaceGroup.getSecretValue()), imageNamespaceGroup);

@@ -5,7 +5,7 @@ import io.kubernetes.client.extended.controller.builder.ControllerBuilder;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1Secret;
-import io.ten1010.aipub.projectcontroller.controller.cluster.RobotAccountService;
+import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotService;
 import io.ten1010.aipub.projectcontroller.core.K8sApis;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 
@@ -15,19 +15,19 @@ public class SecretControllerFactory {
     private Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer;
     private Indexer<V1Secret> secretIndexer;
     private K8sApis k8sApis;
-    private RobotAccountService robotAccountService;
+    private RegistryRobotService registryRobotService;
 
     public SecretControllerFactory(
             SharedInformerFactory sharedInformerFactory,
             Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer,
             Indexer<V1Secret> secretIndexer,
             K8sApis k8sApis,
-            RobotAccountService robotAccountService) {
+            RegistryRobotService registryRobotService) {
         this.sharedInformerFactory = sharedInformerFactory;
         this.imageNamespaceGroupIndexer = imageNamespaceGroupIndexer;
         this.secretIndexer = secretIndexer;
         this.k8sApis = k8sApis;
-        this.robotAccountService = robotAccountService;
+        this.registryRobotService = registryRobotService;
     }
 
     public Controller create() {
@@ -40,8 +40,7 @@ public class SecretControllerFactory {
                         this.imageNamespaceGroupIndexer,
                         this.secretIndexer,
                         this.k8sApis.getCoreV1Api(),
-                        this.robotAccountService
-                ))
+                        this.registryRobotService))
                 .build();
     }
 

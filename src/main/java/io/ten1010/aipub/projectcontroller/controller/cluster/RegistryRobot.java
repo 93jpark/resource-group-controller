@@ -9,7 +9,7 @@ import java.util.List;
 @Getter
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class RegistryRobotAccount {
+public class RegistryRobot {
 
     private Long id;
     private String name;
