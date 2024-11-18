@@ -29,7 +29,7 @@ public class ImageNamespaceGroupWatch implements ControllerWatch<V1alpha1ImageNa
 
         @Override
         public void onAdd(V1alpha1ImageNamespaceGroup v1alpha1ImageNamespaceGroup) {
-            this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(v1alpha1ImageNamespaceGroup));
+            this.queue.add(EventHandlerUtil.resolveClusterScopedObjectToRequest(v1alpha1ImageNamespaceGroup));
         }
 
         @Override

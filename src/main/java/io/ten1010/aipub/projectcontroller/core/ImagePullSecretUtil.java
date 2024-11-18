@@ -17,16 +17,12 @@ public final class ImagePullSecretUtil {
         return Arrays.equals(secret.getData().get(PULL_SECRET_KEY), secretValue.getBytes());
     }
 
-    public static byte[] castToBytes(String secretValue) {
-        return secretValue.getBytes();
-    }
-
-    public static Map<String, byte[]> applyNewSecretValue(V1Secret secret, byte[] secretValue) {
+    public static Map<String, byte[]> applyNewSecretValue(V1Secret secret, String secretValue) {
         Map<String, byte[]> secretValueMap = new HashMap<>();
         if (secret.getData() != null) {
             secretValueMap.putAll(secret.getData());
         }
-        secret.getData().put(PULL_SECRET_KEY, secretValue);
+        secret.getData().put(PULL_SECRET_KEY, secretValue.getBytes());
         return secretValueMap;
     }
 

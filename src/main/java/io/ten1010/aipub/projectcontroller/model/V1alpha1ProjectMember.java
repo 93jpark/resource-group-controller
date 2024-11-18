@@ -16,6 +16,6 @@ public class V1alpha1ProjectMember {
     @Nullable
     private RbacV1Subject subject;
     @Nullable
-    private String role;
+    private String role; // 참조 될 Role
 
 }

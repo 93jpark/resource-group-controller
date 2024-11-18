@@ -21,7 +21,7 @@ public class NodeWatch implements ControllerWatch<V1Node> {
             V1ObjectMeta meta = obj.getMetadata();
             Objects.requireNonNull(meta);
 
-            return new Request(meta.getNamespace(), meta.getName());
+            return new Request(meta.getNamespace(), meta.getName()); // todo 질문 ClusterScoped인데 namespace를 Request파라미터로 제공하는 이유?
         }
 
         private static List<V1Taint> getTaints(V1Node obj) {

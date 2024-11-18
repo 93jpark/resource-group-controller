@@ -7,7 +7,7 @@ import io.kubernetes.client.openapi.models.V1DaemonSet;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.openapi.models.V1Secret;
-import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotService;
+import io.ten1010.aipub.projectcontroller.service.RegistryRobotService;
 import io.ten1010.aipub.projectcontroller.controller.cluster.imagenamespacegroup.ImageNamespaceGroupControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cluster.nodegroup.NodeGroupControllerFactory;
 import io.ten1010.aipub.projectcontroller.controller.cluster.secret.SecretControllerFactory;

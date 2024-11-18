@@ -35,17 +35,17 @@ public class NodeGroupWatch implements ControllerWatch<V1alpha1NodeGroup> {
 
         @Override
         public void onAdd(V1alpha1NodeGroup obj) {
-            this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(obj));
+            this.queue.add(EventHandlerUtil.resolveClusterScopedObjectToRequest(obj));
         }
 
         @Override
         public void onUpdate(V1alpha1NodeGroup oldObj, V1alpha1NodeGroup newObj) {
             if (!oldObj.getNodes().equals(newObj.getNodes())) {
-                queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                queue.add(EventHandlerUtil.resolveClusterScopedObjectToRequest(newObj));
                 return;
             }
             if (!Objects.equals(oldObj.getPolicy(), newObj.getPolicy())) {
-                queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                queue.add(EventHandlerUtil.resolveClusterScopedObjectToRequest(newObj));
                 return;
             }
         }

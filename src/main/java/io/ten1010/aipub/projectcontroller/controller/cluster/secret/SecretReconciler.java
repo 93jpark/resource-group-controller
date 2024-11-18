@@ -12,14 +12,15 @@ import io.kubernetes.client.openapi.models.V1OwnerReference;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1SecretBuilder;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
-import io.ten1010.aipub.projectcontroller.controller.cluster.ProjectImageNamespaceGroup;
-import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobot;
-import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotService;
+import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotConverter;
+import io.ten1010.aipub.projectcontroller.service.RegistryRobot;
+import io.ten1010.aipub.projectcontroller.service.RegistryRobotService;
 import io.ten1010.aipub.projectcontroller.core.ImagePullSecretUtil;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.util.Asserts;
 import org.springframework.util.Assert;
 
 import java.time.Duration;
@@ -53,7 +54,9 @@ public class SecretReconciler implements Reconciler {
     public Result reconcile(Request request) {
         return this.template.execute(
                 () -> {
-                    String imageNamespaceGroupKey = KeyUtil.buildKey(request.getNamespace(), request.getName());
+                    String secretKey = KeyUtil.buildKey(request.getNamespace(), request.getName());
+                    Optional<V1Secret> secretOpt = Optional.ofNullable(secretIndexer.getByKey(secretKey));
+                    String imageNamespaceGroupKey = KeyUtil.buildKey(request.getName());
                     Optional<V1alpha1ImageNamespaceGroup> imageNamespaceGroupOpt = Optional.ofNullable(imageNamespaceGroupIndexer.getByKey(imageNamespaceGroupKey));
                     if (imageNamespaceGroupOpt.isEmpty()) {
                         return new Result(false);
@@ -61,24 +64,22 @@ public class SecretReconciler implements Reconciler {
                     V1alpha1ImageNamespaceGroup imageNamespaceGroup = imageNamespaceGroupOpt.get();
                     Assert.notNull(imageNamespaceGroup.getMetadata(), "metadata must not be null");
                     Assert.notNull(imageNamespaceGroup.getMetadata().getName(), "name must not be null");
-                    ProjectImageNamespaceGroup projectImageNamespaceGroup = ProjectImageNamespaceGroup.from(imageNamespaceGroup);
-                    Optional<RegistryRobot> registryRobotOpt = registryRobotService.getRegistryRobot(projectImageNamespaceGroup.getRegistryRobotName());
-                    if (registryRobotOpt.isEmpty()) {
-                        log.debug("RegistryRobot [{}] not founded while reconciling", projectImageNamespaceGroup.getRegistryRobotName());
+                    String robotUsername = RegistryRobotConverter.toRegistryRobotUsername(K8sObjectUtil.getName(imageNamespaceGroup));
+                    Optional<RegistryRobot> robotOpt = registryRobotService.findByUsername(robotUsername);
+                    if (robotOpt.isEmpty()) {
+                        log.debug("RegistryRobot [{}] not founded while reconciling", imageNamespaceGroup.getMetadata().getName());
                         return new Result(false);
                     }
-                    RegistryRobot registryRobot = registryRobotOpt.get();
-                    projectImageNamespaceGroup.setSecretValue(registryRobot.getSecret());
-                    String secretKey = KeyUtil.buildKey(request.getNamespace(), request.getName());
-                    Optional<V1Secret> secretOpt = Optional.ofNullable(secretIndexer.getByKey(secretKey));
+                    RegistryRobot robot = robotOpt.get();
+                    Asserts.notNull(robot.getSecret(), "registry robot secret must not be null");
                     if (secretOpt.isEmpty()) {
-                        this.createNamespacedSecret(projectImageNamespaceGroup);
+                        this.createNamespacedSecret(request.getNamespace(), request.getName(), robot.getSecret());
                         log.debug("Secret [{}] created for ImageNamespaceGroup[{}] while reconciling", secretKey, imageNamespaceGroupKey);
                         return new Result(false);
                     }
                     V1Secret secret = secretOpt.get();
-                    if (!ImagePullSecretUtil.hasPullSecretData(secret, projectImageNamespaceGroup.getSecretValue())) {
-                        this.updateNamespacedSecretValueAndOwnerRef(secret, ImagePullSecretUtil.castToBytes(projectImageNamespaceGroup.getSecretValue()), imageNamespaceGroup);
+                    if (!ImagePullSecretUtil.hasPullSecretData(secret, robot.getSecret())) {
+                        this.updateNamespacedSecretValueAndOwnerRef(secret, robot.getSecret(), imageNamespaceGroup);
                         log.debug("Secret [{}] updated while reconciling", secretKey);
                         return new Result(false);
                     }
@@ -87,17 +88,17 @@ public class SecretReconciler implements Reconciler {
                 request);
     }
 
-    private void createNamespacedSecret(ProjectImageNamespaceGroup projectImageNamespaceGroup) {
+    private void createNamespacedSecret(String secretName, String secretNamespace, String secretValue) throws ApiException {
         V1Secret secret = new V1Secret();
         V1ObjectMeta objectMeta = new V1ObjectMeta();
-        objectMeta.setName(projectImageNamespaceGroup.getName());
-        objectMeta.setNamespace(projectImageNamespaceGroup.getNamespace());
+        objectMeta.setName(secretName);
+        objectMeta.setNamespace(secretNamespace);
         secret.setMetadata(objectMeta);
-        ImagePullSecretUtil.applyNewSecretValue(secret, projectImageNamespaceGroup.getSecretValue().getBytes());
-        this.coreV1Api.createNamespacedSecret(projectImageNamespaceGroup.getNamespace(), secret);
+        ImagePullSecretUtil.applyNewSecretValue(secret, secretValue);
+        this.coreV1Api.createNamespacedSecret(secretNamespace, secret);
     }
 
-    private void updateNamespacedSecretValueAndOwnerRef(V1Secret target, byte[] secretValue, V1alpha1ImageNamespaceGroup imageNamespaceGroup) throws ApiException {
+    private void updateNamespacedSecretValueAndOwnerRef(V1Secret target, String secretValue, V1alpha1ImageNamespaceGroup imageNamespaceGroup) throws ApiException {
         Assert.notNull(imageNamespaceGroup.getMetadata(), "metadata must not be null");
         Assert.notNull(imageNamespaceGroup.getMetadata().getName(), "name must not be null");
         V1OwnerReference ownerReference = new V1OwnerReference();

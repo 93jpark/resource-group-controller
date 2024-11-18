@@ -7,7 +7,7 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.util.generic.GenericKubernetesApi;
-import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotService;
+import io.ten1010.aipub.projectcontroller.service.RegistryRobotService;
 import io.ten1010.aipub.projectcontroller.core.K8sApis;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupList;
@@ -31,6 +31,7 @@ public class ImageNamespaceGroupControllerFactory {
         this.imageNamespaceGroupIndexer = imageNamespaceGroupIndexer;
         this.secretIndexer = secretIndexer;
         this.imageNamespaceGroupApi = k8sApis.getImageNamespaceGroupApi();
+        this.coreV1Api = k8sApis.getCoreV1Api();
         this.registryRobotService = registryRobotService;
     }
 
@@ -44,6 +45,7 @@ public class ImageNamespaceGroupControllerFactory {
                         this.imageNamespaceGroupIndexer,
                         this.secretIndexer,
                         this.imageNamespaceGroupApi,
+                        this.coreV1Api,
                         this.registryRobotService))
                 .build();
     }

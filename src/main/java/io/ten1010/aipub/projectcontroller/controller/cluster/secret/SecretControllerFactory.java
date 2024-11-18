@@ -5,7 +5,7 @@ import io.kubernetes.client.extended.controller.builder.ControllerBuilder;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1Secret;
-import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotService;
+import io.ten1010.aipub.projectcontroller.service.RegistryRobotService;
 import io.ten1010.aipub.projectcontroller.core.K8sApis;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 
@@ -40,7 +40,8 @@ public class SecretControllerFactory {
                         this.imageNamespaceGroupIndexer,
                         this.secretIndexer,
                         this.k8sApis.getCoreV1Api(),
-                        this.registryRobotService))
+                        this.registryRobotService
+                ))
                 .build();
     }
 

@@ -49,7 +49,7 @@ public class NodeGroupReconciler implements Reconciler {
     public Result reconcile(Request request) {
         return this.template.execute(
                 () -> {
-                    String nodeGroupKey = KeyUtil.buildKey(request.getNamespace(), request.getName());
+                    String nodeGroupKey = KeyUtil.buildKey(request.getName());
                     Optional<V1alpha1NodeGroup> nodeGroupOpt = Optional.ofNullable(this.nodeGroupIndexer.getByKey(nodeGroupKey));
                     if (nodeGroupOpt.isEmpty()) {
                         log.debug("NodeGroup [{}] not founded while reconciling", nodeGroupKey);

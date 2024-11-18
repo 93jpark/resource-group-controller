@@ -10,6 +10,11 @@ import java.util.Set;
 
 public final class EventHandlerUtil {
 
+    public static Request resolveClusterScopedObjectToRequest(KubernetesObject object) {
+        Objects.requireNonNull(object.getMetadata());
+        return new Request(object.getMetadata().getName());
+    }
+
     public static Request resolveNamespacedObjectToRequest(KubernetesObject object) {
         Objects.requireNonNull(object.getMetadata());
         return new Request(object.getMetadata().getNamespace(), object.getMetadata().getName());

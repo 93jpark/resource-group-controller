@@ -49,13 +49,13 @@ public class SharedInformerFactoryFactory {
                 object -> List.of(K8sObjectUtil.getName(object)));
     }
 
-    private static Map<String, Function<V1alpha1ImageNamespaceGroup, List<String>>> byNamespaceNameToImageNamespaceGroupObject() {
-        return Map.of(IndexNames.BY_NAMESPACE_NAME_TO_IMAGE_NAMESPACE_GROUP_OBJECT,
+    private static Map<String, Function<V1alpha1ImageNamespaceGroup, List<String>>> byImageNamespaceGroupNameToImageNamespaceGroupObject() {
+        return Map.of(IndexNames.BY_IMAGE_NAMESPACE_GROUP_NAME_TO_IMAGE_NAMESPACE_GROUP_OBJECT,
                 object -> List.of(K8sObjectUtil.getName(object)));
     }
 
-    private static Map<String, Function<V1alpha1ImageNamespaceGroupBinding, List<String>>> byNamespaceNameToImageNamespaceGroupBindingObject() {
-        return Map.of(IndexNames.BY_NAMESPACE_NAME_TO_IMAGE_NAMESPACE_GROUP_BINDING_OBJECT,
+    private static Map<String, Function<V1alpha1ImageNamespaceGroupBinding, List<String>>> byImageNamespaceGroupBindingNameToImageNamespaceGroupBindingObject() {
+        return Map.of(IndexNames.BY_IMAGE_NAMESPACE_GROUP_BINDING_NAME_TO_IMAGE_NAMESPACE_GROUP_BINDING_OBJECT,
                 object -> List.of(K8sObjectUtil.getName(object)));
     }
 
@@ -131,12 +131,12 @@ public class SharedInformerFactoryFactory {
                 this.k8sApis.getImageNamespaceGroupApi(),
                 V1alpha1ImageNamespaceGroup.class,
                 RESYNC_PERIOD_IN_MILLIS);
-        imageNamespaceGroupInformer.addIndexers(byNamespaceNameToImageNamespaceGroupObject());
+        imageNamespaceGroupInformer.addIndexers(byImageNamespaceGroupNameToImageNamespaceGroupObject());
         SharedIndexInformer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingInformer = informerFactory.sharedIndexInformerFor(
                 this.k8sApis.getImageNamespaceGroupBindingApi(),
                 V1alpha1ImageNamespaceGroupBinding.class,
                 RESYNC_PERIOD_IN_MILLIS);
-        imageNamespaceGroupBindingInformer.addIndexers(byNamespaceNameToImageNamespaceGroupBindingObject());
+        imageNamespaceGroupBindingInformer.addIndexers(byImageNamespaceGroupBindingNameToImageNamespaceGroupBindingObject());
 
         SharedIndexInformer<V1alpha1NodeGroup> groupInformer = informerFactory.sharedIndexInformerFor(
                 this.k8sApis.getNodeGroupApi(),

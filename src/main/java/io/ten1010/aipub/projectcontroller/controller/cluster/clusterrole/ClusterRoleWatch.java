@@ -16,11 +16,11 @@ public class ClusterRoleWatch implements ControllerWatch<V1ClusterRole> {
 
     public static class EventHandler implements ResourceEventHandler<V1ClusterRole> {
 
-        private static Request buildRequest(V1ClusterRole obj) {
+        private static Request buildRequest(V1ClusterRole obj) { // todo 질문 EventHandlerUtil 클래스의 resolveNamespacedObjectToRequest를 사용하지 않는이유?
             V1ObjectMeta meta = obj.getMetadata();
             Objects.requireNonNull(meta);
 
-            return new Request(meta.getNamespace(), meta.getName());
+            return new Request(meta.getNamespace(), meta.getName()); // todo ClusterScopedObject인데 namespace를 사용하는 이유?
         }
 
         private static String getName(V1ClusterRole obj) {
