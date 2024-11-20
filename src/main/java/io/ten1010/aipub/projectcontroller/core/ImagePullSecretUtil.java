@@ -2,7 +2,6 @@ package io.ten1010.aipub.projectcontroller.core;
 
 import io.kubernetes.client.openapi.models.V1Secret;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,11 +9,8 @@ public final class ImagePullSecretUtil {
 
     private static final String PULL_SECRET_KEY = "pullSecret";
 
-    public static boolean hasPullSecretData(V1Secret secret, String secretValue) {
-        if (secret.getData() == null || secret.getData().get(PULL_SECRET_KEY) == null)  {
-            return false;
-        }
-        return Arrays.equals(secret.getData().get(PULL_SECRET_KEY), secretValue.getBytes());
+    public static boolean hasPullSecretData(V1Secret secret) {
+        return secret.getData() != null && secret.getData().get(PULL_SECRET_KEY) != null;
     }
 
     public static Map<String, byte[]> applyNewSecretValue(V1Secret secret, String secretValue) {

@@ -4,7 +4,7 @@ import java.util.Optional;
 
 public interface RegistryRobotService {
 
-    void createRobot(RegistryRobot robot);
+    String createRobot(RegistryRobot robot);
 
     RegistryRobot getRobot(String id);
 

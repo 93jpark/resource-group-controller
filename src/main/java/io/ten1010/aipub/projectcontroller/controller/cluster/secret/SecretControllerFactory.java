@@ -5,6 +5,7 @@ import io.kubernetes.client.extended.controller.builder.ControllerBuilder;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1Secret;
+import io.ten1010.aipub.projectcontroller.configuration.ProjectProperties;
 import io.ten1010.aipub.projectcontroller.service.RegistryRobotService;
 import io.ten1010.aipub.projectcontroller.core.K8sApis;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
@@ -16,18 +17,21 @@ public class SecretControllerFactory {
     private Indexer<V1Secret> secretIndexer;
     private K8sApis k8sApis;
     private RegistryRobotService registryRobotService;
+    private ProjectProperties projectProperties;
 
     public SecretControllerFactory(
             SharedInformerFactory sharedInformerFactory,
             Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer,
             Indexer<V1Secret> secretIndexer,
             K8sApis k8sApis,
-            RegistryRobotService registryRobotService) {
+            RegistryRobotService registryRobotService,
+            ProjectProperties projectProperties) {
         this.sharedInformerFactory = sharedInformerFactory;
         this.imageNamespaceGroupIndexer = imageNamespaceGroupIndexer;
         this.secretIndexer = secretIndexer;
         this.k8sApis = k8sApis;
         this.registryRobotService = registryRobotService;
+        this.projectProperties = projectProperties;
     }
 
     public Controller create() {
@@ -35,12 +39,13 @@ public class SecretControllerFactory {
                 .withName("secret-controller")
                 .withWorkerCount(1)
                 .watch(workQueue -> new SecretWatch(workQueue, this.imageNamespaceGroupIndexer))
-                .watch(workQueue -> new ImageNamespaceGroupWatch(workQueue, this.secretIndexer))
+                .watch(workQueue -> new ImageNamespaceGroupWatch(workQueue, this.secretIndexer, this.projectProperties.getSecretNamespace()))
                 .withReconciler(new SecretReconciler(
                         this.imageNamespaceGroupIndexer,
                         this.secretIndexer,
                         this.k8sApis.getCoreV1Api(),
-                        this.registryRobotService
+                        this.registryRobotService,
+                        this.projectProperties.getSecretNamespace()
                 ))
                 .build();
     }

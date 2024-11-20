@@ -14,11 +14,15 @@ import io.ten1010.aipub.projectcontroller.controller.cluster.secret.SecretContro
 import io.ten1010.aipub.projectcontroller.core.K8sApis;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+@EnableConfigurationProperties(ProjectProperties.class)
 @Configuration
 public class ProjectControllerConfiguration {
+
+    private ProjectProperties projectProperties;
 
     @Bean
     public Controller nodeGroupController(
@@ -51,7 +55,7 @@ public class ProjectControllerConfiguration {
         Indexer<V1Secret> secretIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1Secret.class)
                 .getIndexer();
-        return new ImageNamespaceGroupControllerFactory(sharedInformerFactory, imageNamespaceGroupIndexer, secretIndexer, k8sApis, registryRobotService)
+        return new ImageNamespaceGroupControllerFactory(sharedInformerFactory, imageNamespaceGroupIndexer, secretIndexer, k8sApis, registryRobotService, this.projectProperties)
                 .create();
     }
 
@@ -66,7 +70,7 @@ public class ProjectControllerConfiguration {
         Indexer<V1Secret> secretIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1Secret.class)
                 .getIndexer();
-        return new SecretControllerFactory(sharedInformerFactory, imageNamespaceGroupIndexer, secretIndexer, k8sApis, registryRobotService)
+        return new SecretControllerFactory(sharedInformerFactory, imageNamespaceGroupIndexer, secretIndexer, k8sApis, registryRobotService, this.projectProperties)
                 .create();
     }
 

@@ -10,18 +10,19 @@ import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1TypedObjectReference;
 import io.kubernetes.client.util.generic.GenericKubernetesApi;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
-import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotConverter;
-import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotFactory;
+import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotResolver;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupList;
 import io.ten1010.aipub.projectcontroller.service.RegistryRobot;
 import io.ten1010.aipub.projectcontroller.service.RegistryRobotService;
+import io.ten1010.aipub.projectcontroller.service.RobotPermission;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.util.Assert;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Slf4j
@@ -36,19 +37,24 @@ public class ImageNamespaceGroupReconciler implements Reconciler {
     private GenericKubernetesApi<V1alpha1ImageNamespaceGroup, V1alpha1ImageNamespaceGroupList> imageNamespaceGroupApi;
     private CoreV1Api coreV1Api;
     private RegistryRobotService registryRobotService;
+    private RegistryRobotResolver robotResolver;
+    private String projectSecretNamespace;
 
     public ImageNamespaceGroupReconciler(
             Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer,
             Indexer<V1Secret> secretIndexer,
             GenericKubernetesApi<V1alpha1ImageNamespaceGroup, V1alpha1ImageNamespaceGroupList> imageNamespaceGroupApi,
             CoreV1Api coreV1Api,
-            RegistryRobotService registryRobotService) {
+            RegistryRobotService registryRobotService,
+            String projectSecretNamespace) {
         this.template = new KubernetesApiReconcileExceptionHandlingTemplate(API_CONFLICT_REQUEUE_DURATION, API_FAIL_REQUEUE_DURATION);
         this.imageNamespaceGroupIndexer = imageNamespaceGroupIndexer;
         this.secretIndexer = secretIndexer;
         this.imageNamespaceGroupApi = imageNamespaceGroupApi;
         this.coreV1Api = coreV1Api;
         this.registryRobotService = registryRobotService;
+        this.robotResolver = new RegistryRobotResolver();
+        this.projectSecretNamespace = projectSecretNamespace;
     }
 
     @Override
@@ -57,29 +63,32 @@ public class ImageNamespaceGroupReconciler implements Reconciler {
                 () -> {
                     String imageNamespaceGroupKey = KeyUtil.buildKey(request.getName());
                     Optional<V1alpha1ImageNamespaceGroup> imageNamespaceGroupOpt = Optional.ofNullable(this.imageNamespaceGroupIndexer.getByKey(imageNamespaceGroupKey));
-                    String robotUsername = RegistryRobotConverter.toRegistryRobotUsername(request.getName());
-                    Optional<RegistryRobot> robotOpt = registryRobotService.findByUsername(robotUsername);
+                    String robotUsername = this.robotResolver.resolveRobotUsername(request.getName());
+                    Optional<RegistryRobot> robotOpt = this.registryRobotService.findByUsername(robotUsername);
                     if (imageNamespaceGroupOpt.isEmpty() && robotOpt.isPresent()) {
-                        Assert.notNull(robotOpt.get().getId(), "robot id must not be null");
-                        registryRobotService.deleteRobot(robotOpt.get().getId());
+                        Objects.requireNonNull(robotOpt.get().getId(), "robot id must not be null");
+                        this.registryRobotService.deleteRobot(robotOpt.get().getId());
                         log.debug("Deleted Robot [{}] because ImageNamespaceGroup [{}] not found", robotUsername, imageNamespaceGroupKey);
                         return new Result(false);
                     }
                     if (imageNamespaceGroupOpt.isPresent()) {
-                        Assert.notNull(imageNamespaceGroupOpt.get().getMetadata(), "metadata must not be null");
-                        Assert.notNull(imageNamespaceGroupOpt.get().getMetadata().getName(), "name must not be null");
+                        Objects.requireNonNull(imageNamespaceGroupOpt.get().getMetadata(), "metadata must not be null");
+                        Objects.requireNonNull(imageNamespaceGroupOpt.get().getMetadata().getName(), "name must not be null");
                         V1alpha1ImageNamespaceGroup imageNamespaceGroup = imageNamespaceGroupOpt.get();
                         log.debug("Reconciling ImageNamespaceGroup [{}]", imageNamespaceGroupKey);
-                        RegistryRobot robot = RegistryRobotFactory.create(robotUsername, imageNamespaceGroup.getAipubImageNamespaces());
                         if (robotOpt.isEmpty()) {
-                            this.registryRobotService.createRobot(robot);
+                            log.debug("RegistryRobot [{}] not founded while reconciling", imageNamespaceGroup.getMetadata().getName());
+                            return new Result(false);
                         } else {
-                            if (!robot.getPermissions().equals(robotOpt.get().getPermissions())) {
-                                registryRobotService.updateRobot(robotOpt.get().getId(), robot);
+                            Objects.requireNonNull(robotOpt.get().getId(), "robot id must not be null");
+                            RegistryRobot robot = robotOpt.get();
+                            List<String> robotImageNamespaces = robot.getPermissions().stream().map(RobotPermission::getNamespace).toList();
+                            if (imageNamespaceGroup.getAipubImageNamespaces().equals(robotImageNamespaces)) {
+                                this.registryRobotService.updateRobot(robot.getId(), robot);
                             }
                         }
-                        String secretKey = KeyUtil.buildKey(K8sObjectUtil.getName(imageNamespaceGroup));
-                        Optional<V1Secret> secretOpt = Optional.ofNullable(secretIndexer.getByKey(secretKey));
+                        String secretKey = KeyUtil.buildKey(this.projectSecretNamespace, K8sObjectUtil.getName(imageNamespaceGroup));
+                        Optional<V1Secret> secretOpt = Optional.ofNullable(this.secretIndexer.getByKey(secretKey));
                         if (secretOpt.isPresent()) {
                             V1Secret secret = secretOpt.get();
                             if (imageNamespaceGroup.getSecret() == null) {
