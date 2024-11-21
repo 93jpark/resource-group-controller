@@ -28,7 +28,7 @@ public class DaemonSetWatch implements ControllerWatch<V1DaemonSet> {
 
         @Override
         public void onAdd(V1DaemonSet obj) {
-            this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(obj));
+            this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(obj));
         }
 
         @Override
@@ -36,13 +36,13 @@ public class DaemonSetWatch implements ControllerWatch<V1DaemonSet> {
             Optional<V1Affinity> oldAffinity = DaemonSetUtil.getAffinity(oldObj);
             Optional<V1Affinity> newAffinity = DaemonSetUtil.getAffinity(newObj);
             if (!oldAffinity.equals(newAffinity)) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(newObj));
                 return;
             }
             List<V1Toleration> oldTolerations = DaemonSetUtil.getTolerations(oldObj);
             List<V1Toleration> newTolerations = DaemonSetUtil.getTolerations(newObj);
             if (!oldTolerations.equals(newTolerations)) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(newObj));
                 return;
             }
         }

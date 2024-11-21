@@ -33,7 +33,7 @@ public class SecretWatch implements ControllerWatch<V1Secret> {
         public void onAdd(V1Secret obj) {
             Optional<V1alpha1ImageNamespaceGroup> imageNamespaceGroupOpt = resolveToImageNamespaceGroup(obj);
             if (imageNamespaceGroupOpt.isPresent()) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(imageNamespaceGroupOpt.get()));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(imageNamespaceGroupOpt.get()));
                 return;
             }
         }
@@ -42,13 +42,13 @@ public class SecretWatch implements ControllerWatch<V1Secret> {
         public void onUpdate(V1Secret oldObj, V1Secret newObj) {
             Optional<V1alpha1ImageNamespaceGroup> imageNamespaceGroupOpt = resolveToImageNamespaceGroup(newObj);
             if (imageNamespaceGroupOpt.isPresent()) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(imageNamespaceGroupOpt.get()));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(imageNamespaceGroupOpt.get()));
                 return;
             }
             Optional<Map<String, byte[]>> oldData = Optional.ofNullable(oldObj.getData());
             Optional<Map<String, byte[]>> newData = Optional.ofNullable(newObj.getData());
             if (!oldData.equals(newData)) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(newObj));
                 return;
             }
         }

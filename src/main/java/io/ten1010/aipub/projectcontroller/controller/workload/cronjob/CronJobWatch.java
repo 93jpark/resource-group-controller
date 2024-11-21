@@ -28,7 +28,7 @@ public class CronJobWatch implements ControllerWatch<V1CronJob> {
 
         @Override
         public void onAdd(V1CronJob obj) {
-            this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(obj));
+            this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(obj));
         }
 
         @Override
@@ -36,13 +36,13 @@ public class CronJobWatch implements ControllerWatch<V1CronJob> {
             Optional<V1Affinity> oldAffinity = CronJobUtil.getAffinity(oldObj);
             Optional<V1Affinity> newAffinity = CronJobUtil.getAffinity(newObj);
             if (!oldAffinity.equals(newAffinity)) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(newObj));
                 return;
             }
             List<V1Toleration> oldTolerations = CronJobUtil.getTolerations(oldObj);
             List<V1Toleration> newTolerations = CronJobUtil.getTolerations(newObj);
             if (!oldTolerations.equals(newTolerations)) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(newObj));
                 return;
             }
         }

@@ -46,7 +46,7 @@ public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup>
         public void onAdd(V1Beta1ResourceGroup obj) {
             Set<Request> requestsFromNamespaces = ResourceGroupUtil.getNamespaces(obj).stream()
                     .flatMap(this::resolveToDaemonSet)
-                    .map(EventHandlerUtil::resolveNamespacedObjectToRequest)
+                    .map(EventHandlerUtil::buildRequestFromNamespacedObject)
                     .collect(Collectors.toSet());
             Set<Request> requestsFromDaemonSets = ResourceGroupUtil.getDaemonSets(obj).stream()
                     .map(e -> new Request(e.getNamespace(), e.getName()))
@@ -63,7 +63,7 @@ public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup>
                             ResourceGroupUtil.getNamespaces(newObj))
                     .stream()
                     .flatMap(this::resolveToDaemonSet)
-                    .map(EventHandlerUtil::resolveNamespacedObjectToRequest)
+                    .map(EventHandlerUtil::buildRequestFromNamespacedObject)
                     .collect(Collectors.toSet());
             Set<Request> requestsFromDaemonSets = getAddedOrDeletedDaemonSets(
                     ResourceGroupUtil.getDaemonSets(oldObj),
@@ -80,7 +80,7 @@ public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup>
         public void onDelete(V1Beta1ResourceGroup obj, boolean deletedFinalStateUnknown) {
             Set<Request> requestsFromNamespaces = ResourceGroupUtil.getNamespaces(obj).stream()
                     .flatMap(this::resolveToDaemonSet)
-                    .map(EventHandlerUtil::resolveNamespacedObjectToRequest)
+                    .map(EventHandlerUtil::buildRequestFromNamespacedObject)
                     .collect(Collectors.toSet());
             Set<Request> requestsFromDaemonSets = ResourceGroupUtil.getDaemonSets(obj).stream()
                     .map(e -> new Request(e.getNamespace(), e.getName()))

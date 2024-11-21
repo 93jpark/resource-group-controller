@@ -35,7 +35,7 @@ public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup>
         public void onAdd(V1Beta1ResourceGroup obj) {
             Set<Request> requests = ResourceGroupUtil.getNamespaces(obj).stream()
                     .flatMap(this::resolveToReplicationControllers)
-                    .map(EventHandlerUtil::resolveNamespacedObjectToRequest)
+                    .map(EventHandlerUtil::buildRequestFromNamespacedObject)
                     .collect(Collectors.toSet());
             requests.forEach(this.queue::add);
         }
@@ -47,7 +47,7 @@ public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup>
                             ResourceGroupUtil.getNamespaces(newObj))
                     .stream()
                     .flatMap(this::resolveToReplicationControllers)
-                    .map(EventHandlerUtil::resolveNamespacedObjectToRequest)
+                    .map(EventHandlerUtil::buildRequestFromNamespacedObject)
                     .collect(Collectors.toSet());
             requests.forEach(this.queue::add);
         }
@@ -56,7 +56,7 @@ public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup>
         public void onDelete(V1Beta1ResourceGroup obj, boolean deletedFinalStateUnknown) {
             Set<Request> requests = ResourceGroupUtil.getNamespaces(obj).stream()
                     .flatMap(this::resolveToReplicationControllers)
-                    .map(EventHandlerUtil::resolveNamespacedObjectToRequest)
+                    .map(EventHandlerUtil::buildRequestFromNamespacedObject)
                     .collect(Collectors.toSet());
             requests.forEach(this.queue::add);
         }

@@ -4,14 +4,11 @@ import io.kubernetes.client.extended.controller.ControllerWatch;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.ResourceEventHandler;
-import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1TypedObjectReference;
 import io.ten1010.aipub.projectcontroller.controller.EventHandlerUtil;
-import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 
 import java.time.Duration;
-import java.util.Objects;
 import java.util.Optional;
 
 public class ImageNamespaceGroupWatch implements ControllerWatch<V1alpha1ImageNamespaceGroup> {
@@ -28,26 +25,26 @@ public class ImageNamespaceGroupWatch implements ControllerWatch<V1alpha1ImageNa
 
         @Override
         public void onAdd(V1alpha1ImageNamespaceGroup obj) {
-            this.queue.add(EventHandlerUtil.resolveClusterScopedObjectToRequest(obj));
+            this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(obj));
         }
 
         @Override
         public void onUpdate(V1alpha1ImageNamespaceGroup oldObj, V1alpha1ImageNamespaceGroup newObj) {
             if (!oldObj.getAipubImageNamespaces().equals(newObj.getAipubImageNamespaces())) {
-                this.queue.add(EventHandlerUtil.resolveClusterScopedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(newObj));
                 return;
             }
             Optional<V1TypedObjectReference> oldPullSecretOpt = Optional.ofNullable(oldObj.getSecret());
             Optional<V1TypedObjectReference> newPullSecretOpt = Optional.ofNullable(newObj.getSecret());
             if (oldPullSecretOpt.equals(newPullSecretOpt)) {
-                this.queue.add(EventHandlerUtil.resolveClusterScopedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(newObj));
                 return;
             }
         }
 
         @Override
         public void onDelete(V1alpha1ImageNamespaceGroup obj, boolean deletedFinalStateUnknown) {
-            this.queue.add(EventHandlerUtil.resolveClusterScopedObjectToRequest(obj));
+            this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(obj));
         }
     }
 

@@ -28,7 +28,7 @@ public class DeploymentWatch implements ControllerWatch<V1Deployment> {
 
         @Override
         public void onAdd(V1Deployment obj) {
-            this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(obj));
+            this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(obj));
         }
 
         @Override
@@ -36,13 +36,13 @@ public class DeploymentWatch implements ControllerWatch<V1Deployment> {
             Optional<V1Affinity> oldAffinity = DeploymentUtil.getAffinity(oldObj);
             Optional<V1Affinity> newAffinity = DeploymentUtil.getAffinity(newObj);
             if (!oldAffinity.equals(newAffinity)) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(newObj));
                 return;
             }
             List<V1Toleration> oldTolerations = DeploymentUtil.getTolerations(oldObj);
             List<V1Toleration> newTolerations = DeploymentUtil.getTolerations(newObj);
             if (!oldTolerations.equals(newTolerations)) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(newObj));
                 return;
             }
         }

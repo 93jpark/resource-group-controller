@@ -28,7 +28,7 @@ public class ReplicaSetWatch implements ControllerWatch<V1ReplicaSet> {
 
         @Override
         public void onAdd(V1ReplicaSet obj) {
-            this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(obj));
+            this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(obj));
         }
 
         @Override
@@ -36,13 +36,13 @@ public class ReplicaSetWatch implements ControllerWatch<V1ReplicaSet> {
             Optional<V1Affinity> oldAffinity = ReplicaSetUtil.getAffinity(oldObj);
             Optional<V1Affinity> newAffinity = ReplicaSetUtil.getAffinity(newObj);
             if (!oldAffinity.equals(newAffinity)) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(newObj));
                 return;
             }
             List<V1Toleration> oldTolerations = ReplicaSetUtil.getTolerations(oldObj);
             List<V1Toleration> newTolerations = ReplicaSetUtil.getTolerations(newObj);
             if (!oldTolerations.equals(newTolerations)) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(newObj));
                 return;
             }
         }

@@ -23,7 +23,7 @@ public class JobWatch implements ControllerWatch<V1Job> {
 
         @Override
         public void onAdd(V1Job obj) {
-            this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(obj));
+            this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(obj));
         }
 
         @Override

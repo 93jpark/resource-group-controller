@@ -28,7 +28,7 @@ public class ReplicationControllerWatch implements ControllerWatch<V1Replication
 
         @Override
         public void onAdd(V1ReplicationController obj) {
-            this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(obj));
+            this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(obj));
         }
 
         @Override
@@ -36,13 +36,13 @@ public class ReplicationControllerWatch implements ControllerWatch<V1Replication
             Optional<V1Affinity> oldAffinity = ReplicationControllerUtil.getAffinity(oldObj);
             Optional<V1Affinity> newAffinity = ReplicationControllerUtil.getAffinity(newObj);
             if (!oldAffinity.equals(newAffinity)) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(newObj));
                 return;
             }
             List<V1Toleration> oldTolerations = ReplicationControllerUtil.getTolerations(oldObj);
             List<V1Toleration> newTolerations = ReplicationControllerUtil.getTolerations(newObj);
             if (!oldTolerations.equals(newTolerations)) {
-                this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(newObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(newObj));
                 return;
             }
         }

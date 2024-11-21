@@ -3,7 +3,6 @@ package io.ten1010.aipub.projectcontroller.controller.cluster;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
-import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroupPolicyDaemonSet;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -11,10 +10,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.util.Assert;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Getter
@@ -56,8 +55,8 @@ public class NodeGroupPolicy {
         }
         return nodeGroup.getPolicy().getDaemonSet().getAllowedDaemonSets().stream()
                 .map(allowedDaemonSet -> {
-                    Assert.notNull(allowedDaemonSet.getName(), "allowedDaemonSet.name must not be null");
-                    Assert.notNull(allowedDaemonSet.getNamespace(), "allowedDaemonSet.namespace must not be null");
+                    Objects.requireNonNull(allowedDaemonSet.getName(), "allowedDaemonSet.name must not be null");
+                    Objects.requireNonNull(allowedDaemonSet.getNamespace(), "allowedDaemonSet.namespace must not be null");
                     return KeyUtil.buildKey(allowedDaemonSet.getNamespace(), allowedDaemonSet.getName());
                 })
                 .collect(Collectors.toList());

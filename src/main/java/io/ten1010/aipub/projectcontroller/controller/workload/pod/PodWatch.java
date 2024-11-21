@@ -23,7 +23,7 @@ public class PodWatch implements ControllerWatch<V1Pod> {
 
         @Override
         public void onAdd(V1Pod obj) {
-            this.queue.add(EventHandlerUtil.resolveNamespacedObjectToRequest(obj));
+            this.queue.add(EventHandlerUtil.buildRequestFromNamespacedObject(obj));
         }
 
         @Override

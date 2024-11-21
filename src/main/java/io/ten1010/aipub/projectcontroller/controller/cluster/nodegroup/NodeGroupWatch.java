@@ -12,8 +12,6 @@ import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class NodeGroupWatch implements ControllerWatch<V1alpha1NodeGroup> {
 
@@ -35,17 +33,17 @@ public class NodeGroupWatch implements ControllerWatch<V1alpha1NodeGroup> {
 
         @Override
         public void onAdd(V1alpha1NodeGroup obj) {
-            this.queue.add(EventHandlerUtil.resolveClusterScopedObjectToRequest(obj));
+            this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(obj));
         }
 
         @Override
         public void onUpdate(V1alpha1NodeGroup oldObj, V1alpha1NodeGroup newObj) {
             if (!oldObj.getNodes().equals(newObj.getNodes())) {
-                queue.add(EventHandlerUtil.resolveClusterScopedObjectToRequest(newObj));
+                queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(newObj));
                 return;
             }
             if (!Objects.equals(oldObj.getPolicy(), newObj.getPolicy())) {
-                queue.add(EventHandlerUtil.resolveClusterScopedObjectToRequest(newObj));
+                queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(newObj));
                 return;
             }
         }
