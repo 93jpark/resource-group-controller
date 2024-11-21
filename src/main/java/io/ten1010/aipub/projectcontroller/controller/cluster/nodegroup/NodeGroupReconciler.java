@@ -61,7 +61,7 @@ public class NodeGroupReconciler implements Reconciler {
                     if (!nodeGroupPolicy.isAllowAllDaemonSets()) {
                         boolean daemonSetNotExists = nodeGroupPolicy.getAllowedDaemonSetKeys().stream()
                                 .anyMatch(daemonSetKey -> {
-                                    Optional<V1DaemonSet> daemonSetOpt = Optional.ofNullable(daemonSetIndexer.getByKey(daemonSetKey));
+                                    Optional<V1DaemonSet> daemonSetOpt = Optional.ofNullable(this.daemonSetIndexer.getByKey(daemonSetKey));
                                     if (daemonSetOpt.isEmpty()) {
                                         log.debug("DaemonSet [{}] not founded while reconciling", daemonSetKey);
                                         return true;
