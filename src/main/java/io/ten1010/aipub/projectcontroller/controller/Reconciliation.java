@@ -3,17 +3,27 @@ package io.ten1010.aipub.projectcontroller.controller;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.*;
 import io.ten1010.aipub.projectcontroller.core.*;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBinding;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
 import io.ten1010.groupcontroller.core.*;
 import org.springframework.lang.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Reconciliation {
+
+    private static void reconcileImagePullSecret() {
+
+    }
 
     private static Optional<V1Affinity> reconcileAffinity(@Nullable V1Affinity existingAffinity, List<V1Beta1ResourceGroup> groups) {
         if (existingAffinity == null) {
@@ -223,6 +233,10 @@ public class Reconciliation {
     }
 
     private Indexer<V1Beta1ResourceGroup> groupIndexer;
+    private Indexer<V1alpha1Project> projectIndexer;
+    private Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer;
+    private Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer;
+    private Indexer<V1Secret> secretIndexer;
 
     public Reconciliation(Indexer<V1Beta1ResourceGroup> groupIndexer) {
         this.groupIndexer = groupIndexer;
@@ -389,6 +403,45 @@ public class Reconciliation {
                 IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(statefulSet));
 
         return reconcileTolerations(StatefulSetUtil.getTolerations(statefulSet), groups);
+    }
+
+    public List<V1LocalObjectReference> reconcileUncontrolledDeploymentImagePullSecrets(V1Deployment deployment) {
+        if (K8sObjectUtil.isControlled(deployment)) {
+            throw new IllegalArgumentException();
+        }
+        // todo k8s namespace로 project들 가져옴
+        List<V1alpha1Project> projects = this.projectIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT, K8sObjectUtil.getNamespace(deployment));
+
+        // todo 각 project에 바인딩된 imageNamespaceGroupBinding 가져옴
+        List<V1alpha1ImageNamespaceGroup> imageNamespaceGroups = projects.stream()
+                .map(K8sObjectUtil::getName)
+                .flatMap(projectName -> imageNamespaceGroupBindingIndexer
+                        .byIndex(IndexNames.BY_PROJECT_NAME_TO_IMAGE_NAMESPACE_GROUP_BINDING_OBJECT, projectName)
+                        .stream())
+                .map(binding -> {
+                    Objects.requireNonNull(binding.getImageNamespaceGroupRef());
+                    return imageNamespaceGroupIndexer.getByKey(KeyUtil.buildKey(binding.getImageNamespaceGroupRef()));
+                })
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        List<V1LocalObjectReference> reconciledImagePullSecrets = imageNamespaceGroups.stream().map(e -> {
+                    Objects.requireNonNull(e.getSecret());
+                    Objects.requireNonNull(e.getSecret().getName());
+                    return this.secretIndexer.getByKey(KeyUtil.buildKey(K8sObjectUtil.getNamespace(deployment), e.getSecret().getName()));
+                })
+                .distinct()
+                .toList()
+                .stream()
+                .filter(Objects::nonNull)
+                .map(secret -> {
+                    V1LocalObjectReference reference = new V1LocalObjectReference();
+                    reference.setName(K8sObjectUtil.getName(secret));
+                    return reference;
+                }).toList();
+        return reconciledImagePullSecrets;
+//        return reconcileImagePullSecrets(DeploymentUtil.getImagePullSecrets(deployment), groups);
     }
 
 }

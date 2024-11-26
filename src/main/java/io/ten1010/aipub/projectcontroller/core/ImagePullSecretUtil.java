@@ -13,6 +13,10 @@ public final class ImagePullSecretUtil {
         return secret.getData() != null && secret.getData().get(PULL_SECRET_KEY) != null;
     }
 
+    public static String getPullSecretValue(V1Secret secret) {
+        return new String(secret.getData().get(PULL_SECRET_KEY));
+    }
+
     public static Map<String, byte[]> applyNewSecretValue(V1Secret secret, String secretValue) {
         Map<String, byte[]> secretValueMap = new HashMap<>();
         if (secret.getData() != null) {

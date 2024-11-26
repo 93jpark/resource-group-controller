@@ -75,6 +75,8 @@ public class CronJobReconciler implements Reconciler {
                             updated = true;
                             log.debug("CronJob [{}] updated while reconciling because of tolerations", cronJobKey);
                         }
+                        // todo add reconciled podTemplate with imagePullSecret
+
                         if (updated) {
                             updateCronJob(cronJob, reconciledAffinity.orElse(null), reconciledTolerations);
                         }

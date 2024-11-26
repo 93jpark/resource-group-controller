@@ -67,6 +67,8 @@ public class JobReconciler implements Reconciler {
                     log.debug("Job [{}] deleted while reconciling because of tolerations", jobKey);
                     return new Result(false);
                 }
+                // todo add reconciled podTemplate with imagePullSecret
+
                 return new Result(false);
             }
             ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(job));

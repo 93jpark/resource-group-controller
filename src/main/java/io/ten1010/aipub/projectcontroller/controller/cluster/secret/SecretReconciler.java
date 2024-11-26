@@ -21,6 +21,7 @@ import io.ten1010.aipub.projectcontroller.service.RegistryRobotService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -58,8 +59,6 @@ public class SecretReconciler implements Reconciler {
     public Result reconcile(Request request) {
         return this.template.execute(
                 () -> {
-                    String secretKey = KeyUtil.buildKey(this.projectSecretNamespace, request.getName());
-                    Optional<V1Secret> secretOpt = Optional.ofNullable(secretIndexer.getByKey(secretKey));
                     String imageNamespaceGroupKey = KeyUtil.buildKey(request.getName());
                     Optional<V1alpha1ImageNamespaceGroup> imageNamespaceGroupOpt = Optional.ofNullable(this.imageNamespaceGroupIndexer.getByKey(imageNamespaceGroupKey));
                     if (imageNamespaceGroupOpt.isEmpty()) {
@@ -70,21 +69,45 @@ public class SecretReconciler implements Reconciler {
                     Objects.requireNonNull(imageNamespaceGroup.getMetadata().getName(), "name must not be null");
                     String robotUsername = this.robotResolver.resolveRobotUsername(K8sObjectUtil.getName(imageNamespaceGroup));
                     Optional<RegistryRobot> robotOpt = registryRobotService.findByUsername(robotUsername);
+                    String registrySecretKey = KeyUtil.buildKey(this.projectSecretNamespace, request.getName());
+                    Optional<V1Secret> secretOpt = Optional.ofNullable(secretIndexer.getByKey(registrySecretKey));
                     if (robotOpt.isEmpty()) {
                         log.debug("RegistryRobot [{}] not founded while reconciling", K8sObjectUtil.getName(imageNamespaceGroup));
                         RegistryRobot robot = RegistryRobotFactory.create(K8sObjectUtil.getName(imageNamespaceGroup), imageNamespaceGroup.getAipubImageNamespaces());
                         String robotSecret = registryRobotService.createRobot(robot);
                         if (secretOpt.isEmpty()) {
                             createSecret(K8sObjectUtil.getName(imageNamespaceGroup), this.projectSecretNamespace, robotSecret);
-                            log.debug("Created Secret [{}] for ImageNamespaceGroup[{}] while reconciling", secretKey, imageNamespaceGroupKey);
+                            log.debug("Created Secret [{}] for ImageNamespaceGroup[{}] while reconciling", registrySecretKey, imageNamespaceGroupKey);
                             return new Result(false);
                         }
-                        V1Secret secret = secretOpt.get();
-                        if (!ImagePullSecretUtil.hasPullSecretData(secret)) {
-                            deleteSecret(request.getName(), this.projectSecretNamespace);
-                            log.debug("Deleted Secret [{}] which doesn't have imagePullSecret while reconciling", secretKey);
+                        V1Secret registrySecret = secretOpt.get();
+                        if (!ImagePullSecretUtil.hasPullSecretData(registrySecret)) {
+                            deleteSecret(K8sObjectUtil.getName(registrySecret), K8sObjectUtil.getNamespace(registrySecret));
+                            log.debug("Deleted Secret [{}] which doesn't have imagePullSecret while reconciling", registrySecretKey);
                             return new Result(false);
                         }
+                    }
+                    if (secretOpt.isEmpty()) {
+                        log.debug("Secret [{}] not founded while reconciling", registrySecretKey);
+                        return new Result(false);
+                    }
+                    V1Secret registrySecret = secretOpt.get();
+                    if (!ImagePullSecretUtil.hasPullSecretData(registrySecret)) {
+                        deleteSecret(K8sObjectUtil.getName(registrySecret), K8sObjectUtil.getNamespace(registrySecret));
+                        log.debug("Deleted Secret [{}] which doesn't have imagePullSecret while reconciling", registrySecretKey);
+                        return new Result(false);
+                    }
+                    String projectNamespaceSecretKey = KeyUtil.buildKey(request.getNamespace(), request.getName());
+                    Optional<V1Secret> projectNamespaceSecretOpt = Optional.ofNullable(this.secretIndexer.getByKey(projectNamespaceSecretKey));
+                    if (projectNamespaceSecretOpt.isEmpty()) {
+                        createSecret(request.getName(), request.getNamespace(), ImagePullSecretUtil.getPullSecretValue(registrySecret));
+                        log.debug("Created Project Secret [{}] for Project Namespace[{}] while reconciling", projectNamespaceSecretKey, request.getNamespace());
+                    }
+                    V1Secret projectNamespaceSecret = projectNamespaceSecretOpt.get();
+                    if (!ImagePullSecretUtil.hasPullSecretData(projectNamespaceSecret)) {
+                        deleteSecret(K8sObjectUtil.getName(projectNamespaceSecret), K8sObjectUtil.getNamespace(projectNamespaceSecret));
+                        log.debug("Deleted Project Secret [{}] which doesn't have imagePullSecret while reconciling", projectNamespaceSecretKey);
+                        return new Result(false);
                     }
                     return new Result(false);
                 },

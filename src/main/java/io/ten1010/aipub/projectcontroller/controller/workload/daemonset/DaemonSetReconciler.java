@@ -75,6 +75,8 @@ public class DaemonSetReconciler implements Reconciler {
                             updated = true;
                             log.debug("DaemonSet [{}] updated while reconciling because of tolerations", daemonSetKey);
                         }
+                        // todo add reconciled podTemplate with imagePullSecret
+
                         if (updated) {
                             updateDaemonSet(daemonSet, reconciledAffinity.orElse(null), reconciledTolerations);
                         }

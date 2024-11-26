@@ -75,6 +75,7 @@ public class StatefulSetReconciler implements Reconciler {
                             updated = true;
                             log.debug("StatefulSet [{}] updated while reconciling because of tolerations", statefulSetKey);
                         }
+                        // todo add reconciled podTemplate with imagePullSecret
                         if (updated) {
                             updateStatefulSet(statefulSet, reconciledAffinity.orElse(null), reconciledTolerations);
                         }

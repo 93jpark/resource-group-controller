@@ -75,6 +75,7 @@ public class ReplicaSetReconciler implements Reconciler {
                             updated = true;
                             log.debug("ReplicaSet [{}] updated while reconciling because of tolerations", replicaSetKey);
                         }
+                        // todo add reconciled podTemplate with imagePullSecret
                         if (updated) {
                             updateReplicaSet(replicaSet, reconciledAffinity.orElse(null), reconciledTolerations);
                         }

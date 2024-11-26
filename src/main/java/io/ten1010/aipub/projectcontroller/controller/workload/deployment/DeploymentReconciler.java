@@ -9,6 +9,10 @@ import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1Deployment;
 import io.kubernetes.client.openapi.models.V1DeploymentBuilder;
+import io.kubernetes.client.openapi.models.V1DeploymentSpec;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
+import io.kubernetes.client.openapi.models.V1PodSpec;
+import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1Toleration;
 import io.ten1010.aipub.projectcontroller.controller.ControllerSupport;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
@@ -75,6 +79,14 @@ public class DeploymentReconciler implements Reconciler {
                             updated = true;
                             log.debug("Deployment [{}] updated while reconciling because of tolerations", deploymentKey);
                         }
+                        // todo add reconciled podTemplate with imagePullSecret
+                        List<V1LocalObjectReference> reconciledImagePullSecretes;
+                        V1DeploymentSpec spec = deployment.getSpec();
+                        V1PodTemplateSpec podTemplateSpec = spec.getTemplate();
+                        V1PodSpec podSpec = podTemplateSpec.getSpec();
+                        podSpec.getImagePullSecrets();
+
+
                         if (updated) {
                             updateDeployment(deployment, reconciledAffinity.orElse(null), reconciledTolerations);
                         }

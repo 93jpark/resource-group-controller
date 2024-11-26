@@ -75,6 +75,8 @@ public class ReplicationControllerReconciler implements Reconciler {
                             updated = true;
                             log.debug("ReplicationController [{}] updated while reconciling because of tolerations", replicationControllerKey);
                         }
+                        // todo add reconciled podTemplate with imagePullSecret
+
                         if (updated) {
                             updateReplicationController(replicationController, reconciledAffinity.orElse(null), reconciledTolerations);
                         }

@@ -75,6 +75,8 @@ public class PodReconciler implements Reconciler {
                 }
                 return new Result(false);
             }
+
+            // todo add imagePullSecret checking
             ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(pod));
             if (ControllerSupport.isSupportedControllerOfPod(controllerKind)) {
                 return new Result(false);
