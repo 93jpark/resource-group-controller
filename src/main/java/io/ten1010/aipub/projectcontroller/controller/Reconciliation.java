@@ -21,10 +21,6 @@ import java.util.stream.Stream;
 
 public class Reconciliation {
 
-    private static void reconcileImagePullSecret() {
-
-    }
-
     private static Optional<V1Affinity> reconcileAffinity(@Nullable V1Affinity existingAffinity, List<V1Beta1ResourceGroup> groups) {
         if (existingAffinity == null) {
             List<V1NodeSelectorRequirement> reconciledExpressions = reconcileMatchExpressions(new ArrayList<>(), groups);
@@ -232,6 +228,32 @@ public class Reconciliation {
         return toleration.getKey().equals(Taints.KEY_NODE_GROUP);
     }
 
+    // private static 헬퍼 메소드들
+    private static List<V1LocalObjectReference> reconcileImagePullSecrets(
+            List<V1LocalObjectReference> existingImagePullSecrets,
+            List<V1Secret> imageNamespaceGroupSecrets) {
+
+        Set<String> existingSecretNames = existingImagePullSecrets.stream()
+                .map(V1LocalObjectReference::getName)
+                .collect(Collectors.toSet());
+
+        List<V1LocalObjectReference> imagePullSecrets = imageNamespaceGroupSecrets.stream()
+                .filter(Objects::nonNull)
+                .map(secret -> {
+                    V1LocalObjectReference reference = new V1LocalObjectReference();
+                    reference.setName(K8sObjectUtil.getName(secret));
+                    return reference;
+                }).toList();
+
+        List<V1LocalObjectReference> reconciledImagePullSecrets = new ArrayList<>(existingImagePullSecrets);
+
+        imagePullSecrets.stream()
+                .filter(newSecret -> !existingSecretNames.contains(newSecret.getName()))
+                .forEach(reconciledImagePullSecrets::add);
+
+        return reconciledImagePullSecrets;
+    }
+
     private Indexer<V1Beta1ResourceGroup> groupIndexer;
     private Indexer<V1alpha1Project> projectIndexer;
     private Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer;
@@ -404,15 +426,47 @@ public class Reconciliation {
 
         return reconcileTolerations(StatefulSetUtil.getTolerations(statefulSet), groups);
     }
-
     public List<V1LocalObjectReference> reconcileUncontrolledDeploymentImagePullSecrets(V1Deployment deployment) {
         if (K8sObjectUtil.isControlled(deployment)) {
             throw new IllegalArgumentException();
         }
-        // todo k8s namespace로 project들 가져옴
-        List<V1alpha1Project> projects = this.projectIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT, K8sObjectUtil.getNamespace(deployment));
 
-        // todo 각 project에 바인딩된 imageNamespaceGroupBinding 가져옴
+        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
+                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
+                K8sObjectUtil.getNamespace(deployment)
+        );
+
+        List<V1LocalObjectReference> existingImagePullSecrets = Optional.ofNullable(deployment.getSpec())
+                .map(V1DeploymentSpec::getTemplate)
+                .map(ImagePullSecretUtil::getPodTemplateImagePullSecrets)
+                .orElseGet(ArrayList::new);
+
+        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(deployment));
+
+        return reconcileImagePullSecrets(existingImagePullSecrets, imageNamespaceGroupSecrets);
+    }
+
+    public List<V1LocalObjectReference> reconcileUncontrolledStatefulSetImagePullSecrets(V1StatefulSet statefulSet) {
+        if (K8sObjectUtil.isControlled(statefulSet)) {
+            throw new IllegalArgumentException();
+        }
+
+        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
+                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
+                K8sObjectUtil.getNamespace(statefulSet)
+        );
+
+        List<V1LocalObjectReference> existingImagePullSecrets = Optional.ofNullable(statefulSet.getSpec())
+                .map(V1StatefulSetSpec::getTemplate)
+                .map(ImagePullSecretUtil::getPodTemplateImagePullSecrets)
+                .orElseGet(ArrayList::new);
+
+        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(statefulSet));
+
+        return reconcileImagePullSecrets(existingImagePullSecrets, imageNamespaceGroupSecrets);
+    }
+
+    private List<V1Secret> getImageNamespaceGroupSecrets(List<V1alpha1Project> projects, String namespace) {
         List<V1alpha1ImageNamespaceGroup> imageNamespaceGroups = projects.stream()
                 .map(K8sObjectUtil::getName)
                 .flatMap(projectName -> imageNamespaceGroupBindingIndexer
@@ -426,22 +480,15 @@ public class Reconciliation {
                 .distinct()
                 .toList();
 
-        List<V1LocalObjectReference> reconciledImagePullSecrets = imageNamespaceGroups.stream().map(e -> {
-                    Objects.requireNonNull(e.getSecret());
-                    Objects.requireNonNull(e.getSecret().getName());
-                    return this.secretIndexer.getByKey(KeyUtil.buildKey(K8sObjectUtil.getNamespace(deployment), e.getSecret().getName()));
+        return imageNamespaceGroups.stream()
+                .map(imageNamespaceGroup -> {
+                    Objects.requireNonNull(imageNamespaceGroup.getSecret());
+                    Objects.requireNonNull(imageNamespaceGroup.getSecret().getName());
+                    return this.secretIndexer.getByKey(KeyUtil.buildKey(namespace, imageNamespaceGroup.getSecret().getName()));
                 })
-                .distinct()
-                .toList()
-                .stream()
                 .filter(Objects::nonNull)
-                .map(secret -> {
-                    V1LocalObjectReference reference = new V1LocalObjectReference();
-                    reference.setName(K8sObjectUtil.getName(secret));
-                    return reference;
-                }).toList();
-        return reconciledImagePullSecrets;
-//        return reconcileImagePullSecrets(DeploymentUtil.getImagePullSecrets(deployment), groups);
+                .distinct()
+                .toList();
     }
 
 }

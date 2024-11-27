@@ -1,9 +1,15 @@
 package io.ten1010.aipub.projectcontroller.core;
 
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
+import io.kubernetes.client.openapi.models.V1PodSpec;
+import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1Secret;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public final class ImagePullSecretUtil {
 
@@ -15,6 +21,13 @@ public final class ImagePullSecretUtil {
 
     public static String getPullSecretValue(V1Secret secret) {
         return new String(secret.getData().get(PULL_SECRET_KEY));
+    }
+
+    public static List<V1LocalObjectReference> getPodTemplateImagePullSecrets(V1PodTemplateSpec podTemplateSpec) {
+        return Optional.ofNullable(podTemplateSpec)
+                .map(V1PodTemplateSpec::getSpec)
+                .map(V1PodSpec::getImagePullSecrets)
+                .orElseGet(ArrayList::new);
     }
 
     public static Map<String, byte[]> applyNewSecretValue(V1Secret secret, String secretValue) {

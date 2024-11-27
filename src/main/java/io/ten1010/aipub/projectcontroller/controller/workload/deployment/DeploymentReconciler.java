@@ -19,12 +19,14 @@ import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExcep
 import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import io.ten1010.aipub.projectcontroller.core.ApiResourceKind;
 import io.ten1010.aipub.projectcontroller.core.DeploymentUtil;
+import io.ten1010.aipub.projectcontroller.core.ImagePullSecretUtil;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -79,16 +81,17 @@ public class DeploymentReconciler implements Reconciler {
                             updated = true;
                             log.debug("Deployment [{}] updated while reconciling because of tolerations", deploymentKey);
                         }
-                        // todo add reconciled podTemplate with imagePullSecret
-                        List<V1LocalObjectReference> reconciledImagePullSecretes;
-                        V1DeploymentSpec spec = deployment.getSpec();
-                        V1PodTemplateSpec podTemplateSpec = spec.getTemplate();
-                        V1PodSpec podSpec = podTemplateSpec.getSpec();
-                        podSpec.getImagePullSecrets();
-
-
+                        List<V1LocalObjectReference> existingImagePullSecrets = Optional.ofNullable(deployment.getSpec())
+                                .map(V1DeploymentSpec::getTemplate)
+                                .map(ImagePullSecretUtil::getPodTemplateImagePullSecrets)
+                                .orElseGet(ArrayList::new);
+                        List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledDeploymentImagePullSecrets(deployment);
+                        if (!reconciledImagePullSecrets.equals(existingImagePullSecrets)) {
+                            updated = true;
+                            log.debug("Deployment [{}] updated while reconciling because of imagePullSecrets", deploymentKey);
+                        }
                         if (updated) {
-                            updateDeployment(deployment, reconciledAffinity.orElse(null), reconciledTolerations);
+                            updateDeployment(deployment, reconciledAffinity.orElse(null), reconciledTolerations, reconciledImagePullSecrets);
                         }
                         return new Result(false);
                     }
@@ -103,37 +106,25 @@ public class DeploymentReconciler implements Reconciler {
                 request);
     }
 
-    private void updateDeployment(V1Deployment target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations) throws ApiException {
+    private void updateDeployment(V1Deployment target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations, List<V1LocalObjectReference> imagePullSecrets) throws ApiException {
         V1Deployment updated = new V1DeploymentBuilder(target)
                 .editSpec()
                 .editTemplate()
                 .editSpec()
+                .withImagePullSecrets(imagePullSecrets)
                 .withAffinity(affinity)
                 .withTolerations(tolerations)
                 .endSpec()
                 .endTemplate()
                 .endSpec()
                 .build();
-        this.appsV1Api.replaceNamespacedDeployment(
-                K8sObjectUtil.getName(updated),
-                K8sObjectUtil.getNamespace(updated),
-                updated,
-                null,
-                null,
-                null,
-                null);
+        this.appsV1Api.replaceNamespacedDeployment(K8sObjectUtil.getName(updated), K8sObjectUtil.getNamespace(updated), updated)
+                .execute();
     }
 
     private void deleteDeployment(String namespace, String name) throws ApiException {
-        this.appsV1Api.deleteNamespacedDeployment(
-                name,
-                namespace,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        this.appsV1Api.deleteNamespacedDeployment(name, namespace)
+                .execute();
     }
 
 }
