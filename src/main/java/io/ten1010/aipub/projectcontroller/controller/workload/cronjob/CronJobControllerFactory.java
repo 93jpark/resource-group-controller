@@ -5,9 +5,8 @@ import io.kubernetes.client.extended.controller.builder.ControllerBuilder;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1CronJob;
-import io.ten1010.aipub.projectcontroller.core.K8sApis;
 import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
-import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBinding;
+import io.ten1010.aipub.projectcontroller.core.K8sApis;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
 
 public class CronJobControllerFactory {
@@ -26,6 +25,7 @@ public class CronJobControllerFactory {
             K8sApis k8sApis) {
         this.informerFactory = informerFactory;
         this.cronJobIndexer = cronJobIndexer;
+        this.projectIndexer = projectIndexer;
         this.reconciliation = reconciliation;
         this.k8sApis = k8sApis;
     }
@@ -34,8 +34,8 @@ public class CronJobControllerFactory {
         return ControllerBuilder.defaultBuilder(this.informerFactory)
                 .withName("cron-job-controller")
                 .withWorkerCount(1)
-                .watch(workQueue -> new ResourceGroupWatch(workQueue, this.cronJobIndexer))
                 .watch(workQueue -> new ImageNamespaceGroupBindingWatch(workQueue, this.cronJobIndexer, this.projectIndexer))
+                .watch(workQueue -> new NodeGroupBindingWatch(workQueue, this.cronJobIndexer, this.projectIndexer))
                 .watch(CronJobWatch::new)
                 .withReconciler(new CronJobReconciler(this.cronJobIndexer, this.reconciliation, this.k8sApis.getBatchV1Api()))
                 .build();

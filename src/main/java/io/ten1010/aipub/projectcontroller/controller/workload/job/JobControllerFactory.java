@@ -34,8 +34,8 @@ public class JobControllerFactory {
         return ControllerBuilder.defaultBuilder(this.informerFactory)
                 .withName("job-controller")
                 .withWorkerCount(1)
-                .watch(workQueue -> new ResourceGroupWatch(workQueue, this.jobIndexer))
                 .watch(workQueue -> new ImageNamespaceGroupBindingWatch(workQueue, this.jobIndexer, this.projectIndexer))
+                .watch(workQueue -> new NodeGroupBindingWatch(workQueue, this.jobIndexer, this.projectIndexer))
                 .watch(JobWatch::new)
                 .withReconciler(new JobReconciler(this.jobIndexer, this.reconciliation, this.k8sApis.getBatchV1Api()))
                 .build();

@@ -34,8 +34,8 @@ public class DeploymentControllerFactory {
         return ControllerBuilder.defaultBuilder(this.informerFactory)
                 .withName("deployment-controller")
                 .withWorkerCount(1)
-                .watch(workQueue -> new ResourceGroupWatch(workQueue, this.deploymentIndexer))
                 .watch(workQueue -> new ImageNamespaceGroupBindingWatch(workQueue, this.deploymentIndexer, this.projectIndexer))
+                .watch(workQueue -> new NodeGroupBindingWatch(workQueue, this.deploymentIndexer, this.projectIndexer))
                 .watch(DeploymentWatch::new)
                 .withReconciler(new DeploymentReconciler(this.deploymentIndexer, this.reconciliation, this.k8sApis.getAppsV1Api()))
                 .build();

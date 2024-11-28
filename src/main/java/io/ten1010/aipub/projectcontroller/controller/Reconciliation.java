@@ -34,8 +34,9 @@ import io.ten1010.aipub.projectcontroller.core.StatefulSetUtil;
 import io.ten1010.aipub.projectcontroller.core.Taints;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBinding;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroupBinding;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
-import io.ten1010.groupcontroller.core.*;
 import org.springframework.lang.Nullable;
 
 import java.util.ArrayList;
@@ -49,9 +50,9 @@ import java.util.stream.Stream;
 
 public class Reconciliation {
 
-    private static Optional<V1Affinity> reconcileAffinity(@Nullable V1Affinity existingAffinity, List<V1Beta1ResourceGroup> groups) {
+    private static Optional<V1Affinity> reconcileAffinity(@Nullable V1Affinity existingAffinity, List<V1alpha1NodeGroup> nodeGroups) {
         if (existingAffinity == null) {
-            List<V1NodeSelectorRequirement> reconciledExpressions = reconcileMatchExpressions(new ArrayList<>(), groups);
+            List<V1NodeSelectorRequirement> reconciledExpressions = reconcileMatchExpressions(new ArrayList<>(), nodeGroups);
             if (reconciledExpressions == null) {
                 return Optional.empty();
             }
@@ -67,7 +68,7 @@ public class Reconciliation {
         }
         V1AffinityBuilder builder = new V1AffinityBuilder(existingAffinity);
         if (existingAffinity.getNodeAffinity() == null) {
-            List<V1NodeSelectorRequirement> reconciledExpressions = reconcileMatchExpressions(new ArrayList<>(), groups);
+            List<V1NodeSelectorRequirement> reconciledExpressions = reconcileMatchExpressions(new ArrayList<>(), nodeGroups);
             if (reconciledExpressions == null) {
                 return Optional.of(builder.build());
             }
@@ -82,7 +83,7 @@ public class Reconciliation {
                     .build());
         }
         if (existingAffinity.getNodeAffinity().getRequiredDuringSchedulingIgnoredDuringExecution() == null) {
-            List<V1NodeSelectorRequirement> reconciledExpressions = reconcileMatchExpressions(new ArrayList<>(), groups);
+            List<V1NodeSelectorRequirement> reconciledExpressions = reconcileMatchExpressions(new ArrayList<>(), nodeGroups);
             if (reconciledExpressions == null) {
                 return Optional.of(builder.build());
             }
@@ -98,7 +99,7 @@ public class Reconciliation {
         }
         List<V1NodeSelectorTerm> reconciledTerms = existingAffinity.getNodeAffinity().getRequiredDuringSchedulingIgnoredDuringExecution().getNodeSelectorTerms().stream()
                 .map(term -> new V1NodeSelectorTermBuilder(term)
-                        .withMatchExpressions(reconcileMatchExpressions(term.getMatchExpressions(), groups))
+                        .withMatchExpressions(reconcileMatchExpressions(term.getMatchExpressions(), nodeGroups))
                         .build())
                 .collect(Collectors.toList());
         return Optional.of(builder
@@ -110,11 +111,11 @@ public class Reconciliation {
                 .build());
     }
 
-    private static List<V1Toleration> reconcileTolerations(List<V1Toleration> existingTolerations, List<V1Beta1ResourceGroup> groups) {
+    private static List<V1Toleration> reconcileTolerations(List<V1Toleration> existingTolerations, List<V1alpha1NodeGroup> nodeGroups) {
         List<V1Toleration> tolerations = replaceAllKeyAllEffectTolerations(existingTolerations);
         tolerations = replaceAllKeyNoScheduleEffectTolerations(tolerations);
-        tolerations = removeResourceGroupExclusiveTolerations(tolerations);
-        tolerations.addAll(buildResourceGroupExclusiveTolerations(groups));
+        tolerations = removeNodeGroupExclusiveTolerations(tolerations);
+        tolerations.addAll(buildNodeGroupExclusiveTolerations(nodeGroups));
         return tolerations;
     }
 
@@ -180,37 +181,37 @@ public class Reconciliation {
     }
 
     @Nullable
-    private static List<V1NodeSelectorRequirement> reconcileMatchExpressions(@Nullable List<V1NodeSelectorRequirement> existingExpressions, List<V1Beta1ResourceGroup> groups) {
+    private static List<V1NodeSelectorRequirement> reconcileMatchExpressions(@Nullable List<V1NodeSelectorRequirement> existingExpressions, List<V1alpha1NodeGroup> nodeGroups) {
         if (existingExpressions == null) {
-            List<V1NodeSelectorRequirement> expressions = buildResourceGroupExclusiveMatchExpressions(groups);
+            List<V1NodeSelectorRequirement> expressions = buildNodeGroupExclusiveMatchExpressions(nodeGroups);
             if (expressions.isEmpty()) {
                 return null;
             }
             return expressions;
         }
-        List<V1NodeSelectorRequirement> expressions = extractNonResourceGroupExclusiveMatchExpressions(existingExpressions);
-        expressions.addAll(buildResourceGroupExclusiveMatchExpressions(groups));
+        List<V1NodeSelectorRequirement> expressions = extractNonNodeGroupExclusiveMatchExpressions(existingExpressions);
+        expressions.addAll(buildNodeGroupExclusiveMatchExpressions(nodeGroups));
         if (expressions.isEmpty()) {
             return null;
         }
         return expressions;
     }
 
-    private static List<V1NodeSelectorRequirement> extractNonResourceGroupExclusiveMatchExpressions(List<V1NodeSelectorRequirement> existingExpressions) {
+    private static List<V1NodeSelectorRequirement> extractNonNodeGroupExclusiveMatchExpressions(List<V1NodeSelectorRequirement> existingExpressions) {
         return existingExpressions
                 .stream()
-                .filter(exp -> !isResourceGroupExclusiveNodeSelectorRequirement(exp))
+                .filter(exp -> !isNodeGroupExclusiveNodeSelectorRequirement(exp))
                 .collect(Collectors.toList());
     }
 
-    private static List<V1NodeSelectorRequirement> buildResourceGroupExclusiveMatchExpressions(List<V1Beta1ResourceGroup> groups) {
-        if (groups.isEmpty()) {
+    private static List<V1NodeSelectorRequirement> buildNodeGroupExclusiveMatchExpressions(List<V1alpha1NodeGroup> nodeGroups) {
+        if (nodeGroups.isEmpty()) {
             return new ArrayList<>();
         }
         V1NodeSelectorRequirement expression = new V1NodeSelectorRequirementBuilder()
                 .withKey(Labels.KEY_NODE_GROUP)
                 .withOperator("In")
-                .withValues(groups.stream()
+                .withValues(nodeGroups.stream()
                         .map(K8sObjectUtil::getName)
                         .distinct()
                         .collect(Collectors.toList()))
@@ -218,29 +219,29 @@ public class Reconciliation {
         return List.of(expression);
     }
 
-    private static boolean isResourceGroupExclusiveNodeSelectorRequirement(V1NodeSelectorRequirement requirement) {
+    private static boolean isNodeGroupExclusiveNodeSelectorRequirement(V1NodeSelectorRequirement requirement) {
         if (requirement.getKey() == null) {
             return false;
         }
         return requirement.getKey().equals(Labels.KEY_NODE_GROUP);
     }
 
-    private static List<V1Toleration> removeResourceGroupExclusiveTolerations(List<V1Toleration> tolerations) {
+    private static List<V1Toleration> removeNodeGroupExclusiveTolerations(List<V1Toleration> tolerations) {
         return tolerations.stream()
-                .filter(e -> !isResourceGroupExclusiveToleration(e))
+                .filter(e -> !isNodeGroupExclusiveToleration(e))
                 .collect(Collectors.toList());
     }
 
-    private static List<V1Toleration> buildResourceGroupExclusiveTolerations(List<V1Beta1ResourceGroup> groups) {
-        return groups.stream()
-                .flatMap(e -> buildResourceGroupExclusiveTolerations(e).stream())
+    private static List<V1Toleration> buildNodeGroupExclusiveTolerations(List<V1alpha1NodeGroup> nodeGroups) {
+        return nodeGroups.stream()
+                .flatMap(e -> buildNodeGroupExclusiveTolerations(e).stream())
                 .collect(Collectors.toList());
     }
 
-    private static List<V1Toleration> buildResourceGroupExclusiveTolerations(V1Beta1ResourceGroup group) {
+    private static List<V1Toleration> buildNodeGroupExclusiveTolerations(V1alpha1NodeGroup nodeGroup) {
         V1TolerationBuilder baseBuilder = new V1TolerationBuilder()
                 .withKey(Taints.KEY_NODE_GROUP)
-                .withValue(K8sObjectUtil.getName(group))
+                .withValue(K8sObjectUtil.getName(nodeGroup))
                 .withOperator("Equal");
         V1Toleration noSchedule = baseBuilder
                 .withEffect(Taints.EFFECT_NO_SCHEDULE)
@@ -249,19 +250,25 @@ public class Reconciliation {
         return List.of(noSchedule);
     }
 
-    private static boolean isResourceGroupExclusiveToleration(V1Toleration toleration) {
+    private static boolean isNodeGroupExclusiveToleration(V1Toleration toleration) {
         if (toleration.getKey() == null) {
             return false;
         }
         return toleration.getKey().equals(Taints.KEY_NODE_GROUP);
     }
 
+    /**
+     * Reconcile image pull secrets of workload with project image pull secrets.
+     * @param existingImagePullSecrets
+     * @param projectImagePullSecrets
+     * @return
+     */
     private static List<V1LocalObjectReference> reconcileImagePullSecrets(
-            List<V1LocalObjectReference> existingImagePullSecrets, List<V1Secret> imageNamespaceGroupSecrets) {
+            List<V1LocalObjectReference> existingImagePullSecrets, List<V1Secret> projectImagePullSecrets) {
         Set<String> existingSecretNames = existingImagePullSecrets.stream()
                 .map(V1LocalObjectReference::getName)
                 .collect(Collectors.toSet());
-        List<V1LocalObjectReference> requiredImagePullSecrets = imageNamespaceGroupSecrets.stream()
+        List<V1LocalObjectReference> requiredImagePullSecrets = projectImagePullSecrets.stream()
                 .filter(Objects::nonNull)
                 .map(secret -> {
                     V1LocalObjectReference reference = new V1LocalObjectReference();
@@ -275,30 +282,42 @@ public class Reconciliation {
         return reconciledImagePullSecrets;
     }
 
-    private Indexer<V1Beta1ResourceGroup> groupIndexer;
+    private Indexer<V1alpha1NodeGroup> nodeGroupIndexer;
+    private Indexer<V1alpha1NodeGroupBinding> nodeGroupBindingIndexer;
     private Indexer<V1alpha1Project> projectIndexer;
     private Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer;
     private Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer;
     private Indexer<V1Secret> secretIndexer;
 
-    public Reconciliation(Indexer<V1Beta1ResourceGroup> groupIndexer) {
-        this.groupIndexer = groupIndexer;
+    public Reconciliation(
+            Indexer<V1alpha1NodeGroup> nodeGroupIndexer,
+            Indexer<V1alpha1NodeGroupBinding> nodeGroupBindingIndexer,
+            Indexer<V1alpha1Project> projectIndexer,
+            Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer,
+            Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer,
+            Indexer<V1Secret> secretIndexer) {
+        this.nodeGroupIndexer = nodeGroupIndexer;
+        this.nodeGroupBindingIndexer = nodeGroupBindingIndexer;
+        this.projectIndexer = projectIndexer;
+        this.imageNamespaceGroupBindingIndexer = imageNamespaceGroupBindingIndexer;
+        this.imageNamespaceGroupIndexer = imageNamespaceGroupIndexer;
+        this.secretIndexer = secretIndexer;
     }
 
     public Optional<V1Affinity> reconcileUncontrolledCronJobAffinity(V1CronJob cronJob) {
         if (K8sObjectUtil.isControlled(cronJob)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(cronJob));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(cronJob));
 
-        return reconcileAffinity(CronJobUtil.getAffinity(cronJob).orElse(null), groups);
+        return reconcileAffinity(CronJobUtil.getAffinity(cronJob).orElse(null), nodeGroups);
     }
 
     public Optional<V1Affinity> reconcileUncontrolledDaemonSetAffinity(V1DaemonSet daemonSet) {
         if (K8sObjectUtil.isControlled(daemonSet)) {
             throw new IllegalArgumentException();
         }
+        // todo daemonSet reconciler 재확인 필요
         return DaemonSetUtil.getAffinity(daemonSet);
     }
 
@@ -306,157 +325,140 @@ public class Reconciliation {
         if (K8sObjectUtil.isControlled(deployment)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(deployment));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(deployment));
 
-        return reconcileAffinity(DeploymentUtil.getAffinity(deployment).orElse(null), groups);
+        return reconcileAffinity(DeploymentUtil.getAffinity(deployment).orElse(null), nodeGroups);
     }
 
     public Optional<V1Affinity> reconcileUncontrolledJobAffinity(V1Job job) {
         if (K8sObjectUtil.isControlled(job)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(job));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(job));
 
-        return reconcileAffinity(JobUtil.getAffinity(job).orElse(null), groups);
+        return reconcileAffinity(JobUtil.getAffinity(job).orElse(null), nodeGroups);
     }
 
     public Optional<V1Affinity> reconcileUncontrolledPodAffinity(V1Pod pod) {
         if (K8sObjectUtil.isControlled(pod)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(pod));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(pod));
 
-        return reconcileAffinity(PodUtil.getAffinity(pod).orElse(null), groups);
+        return reconcileAffinity(PodUtil.getAffinity(pod).orElse(null), nodeGroups);
     }
 
     public Optional<V1Affinity> reconcileUncontrolledReplicaSetAffinity(V1ReplicaSet replicaSet) {
         if (K8sObjectUtil.isControlled(replicaSet)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(replicaSet));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(replicaSet));
 
-        return reconcileAffinity(ReplicaSetUtil.getAffinity(replicaSet).orElse(null), groups);
+        return reconcileAffinity(ReplicaSetUtil.getAffinity(replicaSet).orElse(null), nodeGroups);
     }
 
     public Optional<V1Affinity> reconcileUncontrolledReplicationControllerAffinity(V1ReplicationController replicationController) {
         if (K8sObjectUtil.isControlled(replicationController)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(replicationController));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(replicationController));
 
-        return reconcileAffinity(ReplicationControllerUtil.getAffinity(replicationController).orElse(null), groups);
+        return reconcileAffinity(ReplicationControllerUtil.getAffinity(replicationController).orElse(null), nodeGroups);
     }
 
     public Optional<V1Affinity> reconcileUncontrolledStatefulSetAffinity(V1StatefulSet statefulSet) {
         if (K8sObjectUtil.isControlled(statefulSet)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(statefulSet));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(statefulSet));
 
-        return reconcileAffinity(StatefulSetUtil.getAffinity(statefulSet).orElse(null), groups);
+        return reconcileAffinity(StatefulSetUtil.getAffinity(statefulSet).orElse(null), nodeGroups);
     }
 
     public List<V1Toleration> reconcileUncontrolledCronJobTolerations(V1CronJob cronJob) {
         if (K8sObjectUtil.isControlled(cronJob)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(cronJob));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(cronJob));
 
-        return reconcileTolerations(CronJobUtil.getTolerations(cronJob), groups);
+        return reconcileTolerations(CronJobUtil.getTolerations(cronJob), nodeGroups);
     }
 
     public List<V1Toleration> reconcileUncontrolledDaemonSetTolerations(V1DaemonSet daemonSet) {
         if (K8sObjectUtil.isControlled(daemonSet)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groupsContainingNamespace = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(daemonSet));
-        List<V1Beta1ResourceGroup> groupsContainingDaemonSet = this.groupIndexer.byIndex(
+        List<V1alpha1NodeGroup> nodeGroupsContainingNamespace = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(daemonSet));
+        // todo NodeGroup이 지닌 DaemonSet 목록을 가져오는 로직 수정
+        List<V1alpha1NodeGroup> groupsContainingDaemonSet = this.nodeGroupIndexer.byIndex(
                 IndexNames.BY_DAEMON_SET_KEY_TO_GROUP_OBJECT,
                 KeyUtil.buildKey(K8sObjectUtil.getNamespace(daemonSet), K8sObjectUtil.getName(daemonSet)));
-        List<V1Beta1ResourceGroup> groups = Stream.concat(groupsContainingNamespace.stream(), groupsContainingDaemonSet.stream())
+        List<V1alpha1NodeGroup> nodeGroups = Stream.concat(nodeGroupsContainingNamespace.stream(), groupsContainingDaemonSet.stream())
                 .distinct()
                 .collect(Collectors.toList());
 
-        return reconcileTolerations(DaemonSetUtil.getTolerations(daemonSet), groups);
+        return reconcileTolerations(DaemonSetUtil.getTolerations(daemonSet), nodeGroups);
     }
 
     public List<V1Toleration> reconcileUncontrolledDeploymentTolerations(V1Deployment deployment) {
         if (K8sObjectUtil.isControlled(deployment)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(deployment));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(deployment));
 
-        return reconcileTolerations(DeploymentUtil.getTolerations(deployment), groups);
+        return reconcileTolerations(DeploymentUtil.getTolerations(deployment), nodeGroups);
     }
 
     public List<V1Toleration> reconcileUncontrolledJobTolerations(V1Job job) {
         if (K8sObjectUtil.isControlled(job)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(job));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(job));
 
-        return reconcileTolerations(JobUtil.getTolerations(job), groups);
+        return reconcileTolerations(JobUtil.getTolerations(job), nodeGroups);
     }
 
     public List<V1Toleration> reconcileUncontrolledPodTolerations(V1Pod pod) {
         if (K8sObjectUtil.isControlled(pod)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(pod));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(pod));
 
-        return reconcileTolerations(PodUtil.getTolerations(pod), groups);
+        return reconcileTolerations(PodUtil.getTolerations(pod), nodeGroups);
     }
 
     public List<V1Toleration> reconcileUncontrolledReplicaSetTolerations(V1ReplicaSet replicaSet) {
         if (K8sObjectUtil.isControlled(replicaSet)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(replicaSet));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(replicaSet));
 
-        return reconcileTolerations(ReplicaSetUtil.getTolerations(replicaSet), groups);
+        return reconcileTolerations(ReplicaSetUtil.getTolerations(replicaSet), nodeGroups);
     }
 
     public List<V1Toleration> reconcileUncontrolledReplicationControllerTolerations(V1ReplicationController replicationController) {
         if (K8sObjectUtil.isControlled(replicationController)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(replicationController));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(replicationController));
 
-        return reconcileTolerations(ReplicationControllerUtil.getTolerations(replicationController), groups);
+        return reconcileTolerations(ReplicationControllerUtil.getTolerations(replicationController), nodeGroups);
     }
 
     public List<V1Toleration> reconcileUncontrolledStatefulSetTolerations(V1StatefulSet statefulSet) {
         if (K8sObjectUtil.isControlled(statefulSet)) {
             throw new IllegalArgumentException();
         }
-        List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getNamespace(statefulSet));
+        List<V1alpha1NodeGroup> nodeGroups = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(statefulSet));
 
-        return reconcileTolerations(StatefulSetUtil.getTolerations(statefulSet), groups);
+        return reconcileTolerations(StatefulSetUtil.getTolerations(statefulSet), nodeGroups);
     }
 
     public List<V1LocalObjectReference> reconcileUncontrolledCronJobImagePullSecrets(V1CronJob cronJob) {
         if (K8sObjectUtil.isControlled(cronJob)) {
             throw new IllegalArgumentException();
         }
-        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
-                K8sObjectUtil.getNamespace(cronJob)
-        );
-        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(cronJob));
+        List<V1Secret> imageNamespaceGroupSecrets = this.resolveProjectImagePullSecretsByNamespace(K8sObjectUtil.getNamespace(cronJob));
 
         return reconcileImagePullSecrets(CronJobUtil.getImagePullSecrets(cronJob), imageNamespaceGroupSecrets);
     }
@@ -465,11 +467,7 @@ public class Reconciliation {
         if (K8sObjectUtil.isControlled(daemonSet)) {
             throw new IllegalArgumentException();
         }
-        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
-                K8sObjectUtil.getNamespace(daemonSet)
-        );
-        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(daemonSet));
+        List<V1Secret> imageNamespaceGroupSecrets = this.resolveProjectImagePullSecretsByNamespace(K8sObjectUtil.getNamespace(daemonSet));
 
         return reconcileImagePullSecrets(DaemonSetUtil.getImagePullSecrets(daemonSet), imageNamespaceGroupSecrets);
     }
@@ -478,11 +476,7 @@ public class Reconciliation {
         if (K8sObjectUtil.isControlled(deployment)) {
             throw new IllegalArgumentException();
         }
-        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
-                K8sObjectUtil.getNamespace(deployment)
-        );
-        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(deployment));
+        List<V1Secret> imageNamespaceGroupSecrets = this.resolveProjectImagePullSecretsByNamespace(K8sObjectUtil.getNamespace(deployment));
 
         return reconcileImagePullSecrets(DeploymentUtil.getImagePullSecrets(deployment), imageNamespaceGroupSecrets);
     }
@@ -491,11 +485,7 @@ public class Reconciliation {
         if (K8sObjectUtil.isControlled(job)) {
             throw new IllegalArgumentException();
         }
-        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
-                K8sObjectUtil.getNamespace(job)
-        );
-        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(job));
+        List<V1Secret> imageNamespaceGroupSecrets = this.resolveProjectImagePullSecretsByNamespace(K8sObjectUtil.getNamespace(job));
 
         return reconcileImagePullSecrets(JobUtil.getImagePullSecrets(job), imageNamespaceGroupSecrets);
     }
@@ -504,11 +494,7 @@ public class Reconciliation {
         if (K8sObjectUtil.isControlled(pod)) {
             throw new IllegalArgumentException();
         }
-        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
-                K8sObjectUtil.getNamespace(pod)
-        );
-        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(pod));
+        List<V1Secret> imageNamespaceGroupSecrets = this.resolveProjectImagePullSecretsByNamespace(K8sObjectUtil.getNamespace(pod));
 
         return reconcileImagePullSecrets(PodUtil.getImagePullSecrets(pod), imageNamespaceGroupSecrets);
     }
@@ -517,11 +503,7 @@ public class Reconciliation {
         if (K8sObjectUtil.isControlled(replicaSet)) {
             throw new IllegalArgumentException();
         }
-        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
-                K8sObjectUtil.getNamespace(replicaSet)
-        );
-        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(replicaSet));
+        List<V1Secret> imageNamespaceGroupSecrets = this.resolveProjectImagePullSecretsByNamespace(K8sObjectUtil.getNamespace(replicaSet));
 
         return reconcileImagePullSecrets(ReplicaSetUtil.getImagePullSecrets(replicaSet), imageNamespaceGroupSecrets);
     }
@@ -530,11 +512,7 @@ public class Reconciliation {
         if (K8sObjectUtil.isControlled(replicationController)) {
             throw new IllegalArgumentException();
         }
-        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
-                K8sObjectUtil.getNamespace(replicationController)
-        );
-        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(replicationController));
+        List<V1Secret> imageNamespaceGroupSecrets = this.resolveProjectImagePullSecretsByNamespace(K8sObjectUtil.getNamespace(replicationController));
 
         return reconcileImagePullSecrets(ReplicationControllerUtil.getImagePullSecrets(replicationController), imageNamespaceGroupSecrets);
     }
@@ -543,17 +521,30 @@ public class Reconciliation {
         if (K8sObjectUtil.isControlled(statefulSet)) {
             throw new IllegalArgumentException();
         }
-        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
-                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
-                K8sObjectUtil.getNamespace(statefulSet)
-        );
-        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(statefulSet));
+        List<V1Secret> projectImagePullSecrets = this.resolveProjectImagePullSecretsByNamespace(K8sObjectUtil.getNamespace(statefulSet));
 
-        return reconcileImagePullSecrets(StatefulSetUtil.getImagePullSecrets(statefulSet), imageNamespaceGroupSecrets);
+        return reconcileImagePullSecrets(StatefulSetUtil.getImagePullSecrets(statefulSet), projectImagePullSecrets);
     }
 
-    private List<V1Secret> getImageNamespaceGroupSecrets(List<V1alpha1Project> projects, String namespace) {
-        List<V1alpha1ImageNamespaceGroup> imageNamespaceGroups = projects.stream()
+    /**
+     * 주어진 namespace에 속한 project에 바인딩되어있는 ImageNamespaceGroup Secret들을 반환함.
+     * @param namespace
+     * @return
+     */
+    private List<V1Secret> resolveProjectImagePullSecretsByNamespace(String namespace) {
+        // todo 워크로드의 namespace -> project -> imageNamespaceGroupBinding -> imageNamespaceGroup -> secret
+        List<V1alpha1Project> projects = this.projectIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT, namespace);
+        List<V1alpha1ImageNamespaceGroup> imageNamespaceGroups = resolveImageNamespaceGroupBindingsByProjects(projects);
+        return resolveNamespacedImageNamespaceGroupSecrets(imageNamespaceGroups, namespace);
+    }
+
+    /**
+     * 주어진 project들에 바인딩되어있는 ImageNamespaceGroup들을 반환함.
+     * @param projects
+     * @return
+     */
+    private List<V1alpha1ImageNamespaceGroup> resolveImageNamespaceGroupBindingsByProjects(List<V1alpha1Project> projects) {
+        return projects.stream()
                 .map(K8sObjectUtil::getName)
                 .flatMap(projectName -> imageNamespaceGroupBindingIndexer
                         .byIndex(IndexNames.BY_PROJECT_NAME_TO_IMAGE_NAMESPACE_GROUP_BINDING_OBJECT, projectName)
@@ -565,13 +556,56 @@ public class Reconciliation {
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
+    }
 
+    /**
+     * 주어진 namespace에 속한 ImageNamespaceGroup들에 바인딩되어있는 Secret들을 반환함.
+     * @param imageNamespaceGroups
+     * @param namespace
+     * @return
+     */
+    private List<V1Secret> resolveNamespacedImageNamespaceGroupSecrets(List<V1alpha1ImageNamespaceGroup> imageNamespaceGroups, String namespace) {
         return imageNamespaceGroups.stream()
                 .map(imageNamespaceGroup -> {
                     Objects.requireNonNull(imageNamespaceGroup.getSecret());
                     Objects.requireNonNull(imageNamespaceGroup.getSecret().getName());
                     return this.secretIndexer.getByKey(KeyUtil.buildKey(namespace, imageNamespaceGroup.getSecret().getName()));
                 })
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
+    /**
+     * 주어진 namespace에 속한 NodeGroup들을 반환함.
+     * @param namespace
+     * @return
+     */
+    private List<V1alpha1NodeGroup> resolveNodeGroupByNamespace(String namespace) {
+        // todo 워크로드의 namespace -> project -> nodeGroupBinding -> nodeGroup
+        List<V1alpha1Project> projects = this.projectIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT, namespace);
+        List<V1alpha1NodeGroupBinding> nodeGroupBindings = resolveNodeGroupBindingsByProjects(projects);
+        List<V1alpha1NodeGroup> nodeGroups = resolveNodeGroupsByNodeGroupBindings(nodeGroupBindings);
+
+        return nodeGroups;
+    }
+
+    private List<V1alpha1NodeGroupBinding> resolveNodeGroupBindingsByProjects(List<V1alpha1Project> projects) {
+        return projects.stream()
+                .map(K8sObjectUtil::getName)
+                .flatMap(projectName -> this.nodeGroupBindingIndexer
+                        .byIndex(IndexNames.BY_PROJECT_NAME_TO_NODE_GROUP_BINDING_OBJECT, projectName)
+                        .stream())
+                .distinct()
+                .toList();
+    }
+
+    private List<V1alpha1NodeGroup> resolveNodeGroupsByNodeGroupBindings(List<V1alpha1NodeGroupBinding> nodeGroupBindings) {
+        return nodeGroupBindings.stream()
+                .map(V1alpha1NodeGroupBinding::getNodeGroupRef)
+                .filter(Objects::nonNull)
+                .map(KeyUtil::buildKey)
+                .map(this.nodeGroupIndexer::getByKey)
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();

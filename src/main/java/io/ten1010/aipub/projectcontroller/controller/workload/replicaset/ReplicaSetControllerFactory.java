@@ -34,8 +34,8 @@ public class ReplicaSetControllerFactory {
         return ControllerBuilder.defaultBuilder(this.informerFactory)
                 .withName("replica-set-controller")
                 .withWorkerCount(1)
-                .watch(workQueue -> new ResourceGroupWatch(workQueue, this.replicaSetIndexer))
                 .watch(workQueue -> new ImageNamespaceGroupBindingWatch(workQueue, this.replicaSetIndexer, this.projectIndexer))
+                .watch(workQueue -> new NodeGroupBindingWatch(workQueue, this.replicaSetIndexer, this.projectIndexer))
                 .watch(ReplicaSetWatch::new)
                 .withReconciler(new ReplicaSetReconciler(this.replicaSetIndexer, this.reconciliation, this.k8sApis.getAppsV1Api()))
                 .build();

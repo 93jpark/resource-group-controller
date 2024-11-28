@@ -34,8 +34,8 @@ public class ReplicationControllerControllerFactory {
         return ControllerBuilder.defaultBuilder(this.informerFactory)
                 .withName("replication-controller-controller")
                 .withWorkerCount(1)
-                .watch(workQueue -> new ResourceGroupWatch(workQueue, this.replicationControllerIndexer))
                 .watch(workQueue -> new ImageNamespaceGroupBindingWatch(workQueue, this.replicationControllerIndexer, this.projectIndexer))
+                .watch(workQueue -> new NodeGroupBindingWatch(workQueue, this.replicationControllerIndexer, this.projectIndexer))
                 .watch(ReplicationControllerWatch::new)
                 .withReconciler(new ReplicationControllerReconciler(this.replicationControllerIndexer, this.reconciliation, this.k8sApis.getCoreV1Api()))
                 .build();

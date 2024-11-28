@@ -23,6 +23,15 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
 
     public static class EventHandler implements ResourceEventHandler<V1alpha1ImageNamespaceGroupBinding> {
 
+        private static Set<String> getAddedOrDeletedProjects(List<String> oldProjects, List<String> newProjects) {
+            Set<String> deleted = new HashSet<>(oldProjects);
+            newProjects.forEach(deleted::remove);
+            Set<String> added = new HashSet<>(newProjects);
+            oldProjects.forEach(added::remove);
+            deleted.addAll(added);
+            return deleted;
+        }
+
         private WorkQueue<Request> queue;
         private Indexer<V1alpha1Project> projectIndexer;
 
@@ -58,7 +67,7 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
         @Override
         public void onDelete(V1alpha1ImageNamespaceGroupBinding obj, boolean deletedFinalStateUnknown) {
             obj.getProjects().stream()
-                    .map(projectName -> Optional.ofNullable(projectIndexer.getByKey(KeyUtil.buildKey(projectName))))
+                    .map(projectName -> Optional.ofNullable(this.projectIndexer.getByKey(KeyUtil.buildKey(projectName))))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .map(project -> buildRequest(obj.getImageNamespaceGroupRef(), project.getNamespace()))
@@ -69,15 +78,6 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
             Objects.requireNonNull(imageNamespaceGroupRef);
             Objects.requireNonNull(projectNamespace);
             return new Request(projectNamespace, imageNamespaceGroupRef);
-        }
-
-        private static Set<String> getAddedOrDeletedProjects(List<String> oldProjects, List<String> newProjects) {
-            Set<String> deleted = new HashSet<>(oldProjects);
-            newProjects.forEach(deleted::remove);
-            Set<String> added = new HashSet<>(newProjects);
-            oldProjects.forEach(added::remove);
-            deleted.addAll(added);
-            return deleted;
         }
 
         private Stream<Request> processGroupRefChange(V1alpha1ImageNamespaceGroupBinding obj) {

@@ -55,7 +55,7 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
             if (!oldObj.getProjects().equals(newObj.getProjects())) {
                 getAddedOrDeletedProjects(oldObj.getProjects(), newObj.getProjects())
                         .stream().map(projectName -> this.projectIndexer.getByKey(KeyUtil.buildKey(projectName)))
-                        .map(project -> this.resolveToDaemonSet(project.getNamespace()))
+                        .map(project -> resolveToDaemonSet(project.getNamespace()))
                         .forEach(daemonSets -> {
                             daemonSets.stream()
                                     .map(EventHandlerUtil::buildRequestFromNamespacedObject)

@@ -34,8 +34,8 @@ public class PodControllerFactory {
         return ControllerBuilder.defaultBuilder(this.informerFactory)
                 .withName("pod-controller")
                 .withWorkerCount(1)
-                .watch(workQueue -> new ResourceGroupWatch(workQueue, this.podIndexer))
                 .watch(workQueue -> new ImageNamespaceGroupBindingWatch(workQueue, this.podIndexer, this.projectIndexer))
+                .watch(workQueue -> new NodeGroupBindingWatch(workQueue, this.podIndexer, this.projectIndexer))
                 .watch(PodWatch::new)
                 .withReconciler(new PodReconciler(this.podIndexer, this.reconciliation, this.k8sApis.getCoreV1Api()))
                 .build();

@@ -34,8 +34,8 @@ public class StatefulSetControllerFactory {
         return ControllerBuilder.defaultBuilder(this.informerFactory)
                 .withName("stateful-set-controller")
                 .withWorkerCount(1)
-                .watch(workQueue -> new ResourceGroupWatch(workQueue, this.statefulSetIndexer))
                 .watch(workQueue -> new ImageNamespaceGroupBindingWatch(workQueue, this.statefulSetIndexer, this.projectIndexer))
+                .watch(workQueue -> new NodeGroupBindingWatch(workQueue, this.statefulSetIndexer, this.projectIndexer))
                 .watch(StatefulSetWatch::new)
                 .withReconciler(new StatefulSetReconciler(this.statefulSetIndexer, this.reconciliation, this.k8sApis.getAppsV1Api()))
                 .build();
