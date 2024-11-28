@@ -1,8 +1,37 @@
 package io.ten1010.aipub.projectcontroller.controller;
 
 import io.kubernetes.client.informer.cache.Indexer;
-import io.kubernetes.client.openapi.models.*;
-import io.ten1010.aipub.projectcontroller.core.*;
+import io.kubernetes.client.openapi.models.V1Affinity;
+import io.kubernetes.client.openapi.models.V1AffinityBuilder;
+import io.kubernetes.client.openapi.models.V1CronJob;
+import io.kubernetes.client.openapi.models.V1DaemonSet;
+import io.kubernetes.client.openapi.models.V1Deployment;
+import io.kubernetes.client.openapi.models.V1Job;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
+import io.kubernetes.client.openapi.models.V1NodeSelectorRequirement;
+import io.kubernetes.client.openapi.models.V1NodeSelectorRequirementBuilder;
+import io.kubernetes.client.openapi.models.V1NodeSelectorTerm;
+import io.kubernetes.client.openapi.models.V1NodeSelectorTermBuilder;
+import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1ReplicaSet;
+import io.kubernetes.client.openapi.models.V1ReplicationController;
+import io.kubernetes.client.openapi.models.V1Secret;
+import io.kubernetes.client.openapi.models.V1StatefulSet;
+import io.kubernetes.client.openapi.models.V1Toleration;
+import io.kubernetes.client.openapi.models.V1TolerationBuilder;
+import io.ten1010.aipub.projectcontroller.core.CronJobUtil;
+import io.ten1010.aipub.projectcontroller.core.DaemonSetUtil;
+import io.ten1010.aipub.projectcontroller.core.DeploymentUtil;
+import io.ten1010.aipub.projectcontroller.core.IndexNames;
+import io.ten1010.aipub.projectcontroller.core.JobUtil;
+import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
+import io.ten1010.aipub.projectcontroller.core.KeyUtil;
+import io.ten1010.aipub.projectcontroller.core.Labels;
+import io.ten1010.aipub.projectcontroller.core.PodUtil;
+import io.ten1010.aipub.projectcontroller.core.ReplicaSetUtil;
+import io.ten1010.aipub.projectcontroller.core.ReplicationControllerUtil;
+import io.ten1010.aipub.projectcontroller.core.StatefulSetUtil;
+import io.ten1010.aipub.projectcontroller.core.Taints;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBinding;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
@@ -11,7 +40,6 @@ import org.springframework.lang.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -228,29 +256,22 @@ public class Reconciliation {
         return toleration.getKey().equals(Taints.KEY_NODE_GROUP);
     }
 
-    // private static 헬퍼 메소드들
     private static List<V1LocalObjectReference> reconcileImagePullSecrets(
-            List<V1LocalObjectReference> existingImagePullSecrets,
-            List<V1Secret> imageNamespaceGroupSecrets) {
-
+            List<V1LocalObjectReference> existingImagePullSecrets, List<V1Secret> imageNamespaceGroupSecrets) {
         Set<String> existingSecretNames = existingImagePullSecrets.stream()
                 .map(V1LocalObjectReference::getName)
                 .collect(Collectors.toSet());
-
-        List<V1LocalObjectReference> imagePullSecrets = imageNamespaceGroupSecrets.stream()
+        List<V1LocalObjectReference> requiredImagePullSecrets = imageNamespaceGroupSecrets.stream()
                 .filter(Objects::nonNull)
                 .map(secret -> {
                     V1LocalObjectReference reference = new V1LocalObjectReference();
                     reference.setName(K8sObjectUtil.getName(secret));
                     return reference;
                 }).toList();
-
         List<V1LocalObjectReference> reconciledImagePullSecrets = new ArrayList<>(existingImagePullSecrets);
-
-        imagePullSecrets.stream()
-                .filter(newSecret -> !existingSecretNames.contains(newSecret.getName()))
+        requiredImagePullSecrets.stream()
+                .filter(imagePullSecret -> !existingSecretNames.contains(imagePullSecret.getName()))
                 .forEach(reconciledImagePullSecrets::add);
-
         return reconciledImagePullSecrets;
     }
 
@@ -426,44 +447,109 @@ public class Reconciliation {
 
         return reconcileTolerations(StatefulSetUtil.getTolerations(statefulSet), groups);
     }
+
+    public List<V1LocalObjectReference> reconcileUncontrolledCronJobImagePullSecrets(V1CronJob cronJob) {
+        if (K8sObjectUtil.isControlled(cronJob)) {
+            throw new IllegalArgumentException();
+        }
+        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
+                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
+                K8sObjectUtil.getNamespace(cronJob)
+        );
+        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(cronJob));
+
+        return reconcileImagePullSecrets(CronJobUtil.getImagePullSecrets(cronJob), imageNamespaceGroupSecrets);
+    }
+
+    public List<V1LocalObjectReference> reconcileUncontrolledDaemonSetImagePullSecrets(V1DaemonSet daemonSet) {
+        if (K8sObjectUtil.isControlled(daemonSet)) {
+            throw new IllegalArgumentException();
+        }
+        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
+                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
+                K8sObjectUtil.getNamespace(daemonSet)
+        );
+        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(daemonSet));
+
+        return reconcileImagePullSecrets(DaemonSetUtil.getImagePullSecrets(daemonSet), imageNamespaceGroupSecrets);
+    }
+
     public List<V1LocalObjectReference> reconcileUncontrolledDeploymentImagePullSecrets(V1Deployment deployment) {
         if (K8sObjectUtil.isControlled(deployment)) {
             throw new IllegalArgumentException();
         }
-
         List<V1alpha1Project> projects = this.projectIndexer.byIndex(
                 IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
                 K8sObjectUtil.getNamespace(deployment)
         );
-
-        List<V1LocalObjectReference> existingImagePullSecrets = Optional.ofNullable(deployment.getSpec())
-                .map(V1DeploymentSpec::getTemplate)
-                .map(ImagePullSecretUtil::getPodTemplateImagePullSecrets)
-                .orElseGet(ArrayList::new);
-
         List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(deployment));
 
-        return reconcileImagePullSecrets(existingImagePullSecrets, imageNamespaceGroupSecrets);
+        return reconcileImagePullSecrets(DeploymentUtil.getImagePullSecrets(deployment), imageNamespaceGroupSecrets);
+    }
+
+    public List<V1LocalObjectReference> reconcileUncontrolledJobImagePullSecrets(V1Job job) {
+        if (K8sObjectUtil.isControlled(job)) {
+            throw new IllegalArgumentException();
+        }
+        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
+                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
+                K8sObjectUtil.getNamespace(job)
+        );
+        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(job));
+
+        return reconcileImagePullSecrets(JobUtil.getImagePullSecrets(job), imageNamespaceGroupSecrets);
+    }
+
+    public List<V1LocalObjectReference> reconcileUncontrolledPodImagePullSecrets(V1Pod pod) {
+        if (K8sObjectUtil.isControlled(pod)) {
+            throw new IllegalArgumentException();
+        }
+        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
+                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
+                K8sObjectUtil.getNamespace(pod)
+        );
+        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(pod));
+
+        return reconcileImagePullSecrets(PodUtil.getImagePullSecrets(pod), imageNamespaceGroupSecrets);
+    }
+
+    public List<V1LocalObjectReference> reconcileUncontrolledReplicaSetImagePullSecrets(V1ReplicaSet replicaSet) {
+        if (K8sObjectUtil.isControlled(replicaSet)) {
+            throw new IllegalArgumentException();
+        }
+        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
+                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
+                K8sObjectUtil.getNamespace(replicaSet)
+        );
+        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(replicaSet));
+
+        return reconcileImagePullSecrets(ReplicaSetUtil.getImagePullSecrets(replicaSet), imageNamespaceGroupSecrets);
+    }
+
+    public List<V1LocalObjectReference> reconcileUncontrolledReplicationControllerImagePullSecrets(V1ReplicationController replicationController) {
+        if (K8sObjectUtil.isControlled(replicationController)) {
+            throw new IllegalArgumentException();
+        }
+        List<V1alpha1Project> projects = this.projectIndexer.byIndex(
+                IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
+                K8sObjectUtil.getNamespace(replicationController)
+        );
+        List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(replicationController));
+
+        return reconcileImagePullSecrets(ReplicationControllerUtil.getImagePullSecrets(replicationController), imageNamespaceGroupSecrets);
     }
 
     public List<V1LocalObjectReference> reconcileUncontrolledStatefulSetImagePullSecrets(V1StatefulSet statefulSet) {
         if (K8sObjectUtil.isControlled(statefulSet)) {
             throw new IllegalArgumentException();
         }
-
         List<V1alpha1Project> projects = this.projectIndexer.byIndex(
                 IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
                 K8sObjectUtil.getNamespace(statefulSet)
         );
-
-        List<V1LocalObjectReference> existingImagePullSecrets = Optional.ofNullable(statefulSet.getSpec())
-                .map(V1StatefulSetSpec::getTemplate)
-                .map(ImagePullSecretUtil::getPodTemplateImagePullSecrets)
-                .orElseGet(ArrayList::new);
-
         List<V1Secret> imageNamespaceGroupSecrets = getImageNamespaceGroupSecrets(projects, K8sObjectUtil.getNamespace(statefulSet));
 
-        return reconcileImagePullSecrets(existingImagePullSecrets, imageNamespaceGroupSecrets);
+        return reconcileImagePullSecrets(StatefulSetUtil.getImagePullSecrets(statefulSet), imageNamespaceGroupSecrets);
     }
 
     private List<V1Secret> getImageNamespaceGroupSecrets(List<V1alpha1Project> projects, String namespace) {

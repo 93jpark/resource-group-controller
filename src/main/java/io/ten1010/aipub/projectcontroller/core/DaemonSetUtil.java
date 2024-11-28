@@ -2,6 +2,7 @@ package io.ten1010.aipub.projectcontroller.core;
 
 import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1DaemonSet;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1Toleration;
 
 import java.util.ArrayList;
@@ -31,6 +32,17 @@ public final class DaemonSetUtil {
             return Optional.empty();
         }
         return Optional.of(affinity);
+    }
+
+    public static List<V1LocalObjectReference> getImagePullSecrets(V1DaemonSet daemonSet) {
+        if (daemonSet.getSpec() == null ||
+                daemonSet.getSpec().getTemplate() == null ||
+                daemonSet.getSpec().getTemplate().getSpec() == null ||
+                daemonSet.getSpec().getTemplate().getSpec().getImagePullSecrets() == null) {
+            return new ArrayList<>();
+        }
+
+        return daemonSet.getSpec().getTemplate().getSpec().getImagePullSecrets();
     }
 
     private DaemonSetUtil() {

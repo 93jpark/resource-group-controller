@@ -42,7 +42,7 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
                     .map(projectName -> projectIndexer.getByKey(KeyUtil.buildKey(projectName)))
                     .filter(Objects::nonNull)
                     .flatMap(project ->
-                            Optional.of(resolveToJob(Objects.requireNonNull(project.getNamespace())))
+                            Optional.of(resolveToJob(project.getNamespace()))
                                     .orElse(Collections.emptyList())
                                     .stream()
                                     .map(EventHandlerUtil::buildRequestFromNamespacedObject)
@@ -55,7 +55,7 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
             if (!oldObj.getProjects().equals(newObj.getProjects())) {
                 getAddedOrDeletedProjects(oldObj.getProjects(), newObj.getProjects())
                         .stream().map(projectName -> this.projectIndexer.getByKey(KeyUtil.buildKey(projectName)))
-                        .map(project -> this.resolveToJob(Objects.requireNonNull(project.getNamespace())))
+                        .map(project -> this.resolveToJob(project.getNamespace()))
                         .forEach(jobs -> {
                             jobs.stream()
                                     .map(EventHandlerUtil::buildRequestFromNamespacedObject)
@@ -66,7 +66,16 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
 
         @Override
         public void onDelete(V1alpha1ImageNamespaceGroupBinding obj, boolean deletedFinalStateUnknown) {
-
+            obj.getProjects().stream()
+                    .map(projectName -> projectIndexer.getByKey(KeyUtil.buildKey(projectName)))
+                    .filter(Objects::nonNull)
+                    .flatMap(project ->
+                            Optional.of(resolveToJob(project.getNamespace()))
+                                    .orElse(Collections.emptyList())
+                                    .stream()
+                                    .map(EventHandlerUtil::buildRequestFromNamespacedObject)
+                    )
+                    .forEach(queue::add);
         }
 
         private static Set<String> getAddedOrDeletedProjects(List<String> oldProjects, List<String> newProjects) {
@@ -79,6 +88,7 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
         }
 
         private List<V1Job> resolveToJob(String namespaceName) {
+            Objects.requireNonNull(namespaceName);
             return this.jobIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_JOB_OBJECT, namespaceName);
         }
 

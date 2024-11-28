@@ -4,6 +4,7 @@ import io.kubernetes.client.extended.controller.ControllerWatch;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.ResourceEventHandler;
+import io.ten1010.aipub.projectcontroller.controller.EventHandlerUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroupBinding;
 
 import java.time.Duration;
@@ -22,17 +23,17 @@ public class NodeGroupBindingWatch implements ControllerWatch<V1alpha1NodeGroupB
 
         @Override
         public void onAdd(V1alpha1NodeGroupBinding obj) {
-
+            this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(obj));
         }
 
         @Override
         public void onUpdate(V1alpha1NodeGroupBinding oldObj, V1alpha1NodeGroupBinding newObj) {
-
+            this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(newObj));
         }
 
         @Override
         public void onDelete(V1alpha1NodeGroupBinding obj, boolean deletedFinalStateUnknown) {
-
+            this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(obj));
         }
     }
 

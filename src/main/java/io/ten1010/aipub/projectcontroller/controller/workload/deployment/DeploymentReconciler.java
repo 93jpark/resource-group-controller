@@ -9,24 +9,19 @@ import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1Deployment;
 import io.kubernetes.client.openapi.models.V1DeploymentBuilder;
-import io.kubernetes.client.openapi.models.V1DeploymentSpec;
 import io.kubernetes.client.openapi.models.V1LocalObjectReference;
-import io.kubernetes.client.openapi.models.V1PodSpec;
-import io.kubernetes.client.openapi.models.V1PodTemplateSpec;
 import io.kubernetes.client.openapi.models.V1Toleration;
 import io.ten1010.aipub.projectcontroller.controller.ControllerSupport;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
 import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import io.ten1010.aipub.projectcontroller.core.ApiResourceKind;
 import io.ten1010.aipub.projectcontroller.core.DeploymentUtil;
-import io.ten1010.aipub.projectcontroller.core.ImagePullSecretUtil;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -81,12 +76,8 @@ public class DeploymentReconciler implements Reconciler {
                             updated = true;
                             log.debug("Deployment [{}] updated while reconciling because of tolerations", deploymentKey);
                         }
-                        List<V1LocalObjectReference> existingImagePullSecrets = Optional.ofNullable(deployment.getSpec())
-                                .map(V1DeploymentSpec::getTemplate)
-                                .map(ImagePullSecretUtil::getPodTemplateImagePullSecrets)
-                                .orElseGet(ArrayList::new);
                         List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledDeploymentImagePullSecrets(deployment);
-                        if (!reconciledImagePullSecrets.equals(existingImagePullSecrets)) {
+                        if (!DeploymentUtil.getImagePullSecrets(deployment).equals(reconciledImagePullSecrets)) {
                             updated = true;
                             log.debug("Deployment [{}] updated while reconciling because of imagePullSecrets", deploymentKey);
                         }
@@ -111,9 +102,9 @@ public class DeploymentReconciler implements Reconciler {
                 .editSpec()
                 .editTemplate()
                 .editSpec()
-                .withImagePullSecrets(imagePullSecrets)
                 .withAffinity(affinity)
                 .withTolerations(tolerations)
+                .withImagePullSecrets(imagePullSecrets)
                 .endSpec()
                 .endTemplate()
                 .endSpec()

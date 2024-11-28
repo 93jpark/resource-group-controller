@@ -2,6 +2,7 @@ package io.ten1010.aipub.projectcontroller.core;
 
 import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1Job;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1Toleration;
 
 import java.util.ArrayList;
@@ -31,6 +32,18 @@ public final class JobUtil {
             return Optional.empty();
         }
         return Optional.of(affinity);
+    }
+
+    public static List<V1LocalObjectReference> getImagePullSecrets(V1Job job) {
+        if (job.getSpec() == null ||
+                job.getSpec().getTemplate() == null ||
+                job.getSpec().getTemplate().getSpec() == null ||
+                job.getSpec().getTemplate().getSpec().getImagePullSecrets() == null
+        ) {
+            return new ArrayList<>();
+        }
+
+        return job.getSpec().getTemplate().getSpec().getImagePullSecrets();
     }
 
     private JobUtil() {

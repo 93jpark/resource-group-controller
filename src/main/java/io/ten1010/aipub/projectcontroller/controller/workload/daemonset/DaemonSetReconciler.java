@@ -9,14 +9,15 @@ import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1DaemonSet;
 import io.kubernetes.client.openapi.models.V1DaemonSetBuilder;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1Toleration;
+import io.ten1010.aipub.projectcontroller.controller.ControllerSupport;
+import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
+import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import io.ten1010.aipub.projectcontroller.core.ApiResourceKind;
 import io.ten1010.aipub.projectcontroller.core.DaemonSetUtil;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
-import io.ten1010.aipub.projectcontroller.controller.ControllerSupport;
-import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
-import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 
@@ -75,10 +76,13 @@ public class DaemonSetReconciler implements Reconciler {
                             updated = true;
                             log.debug("DaemonSet [{}] updated while reconciling because of tolerations", daemonSetKey);
                         }
-                        // todo add reconciled podTemplate with imagePullSecret
-
+                        List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledDaemonSetImagePullSecrets(daemonSet);
+                        if (!DaemonSetUtil.getImagePullSecrets(daemonSet).equals(reconciledImagePullSecrets)) {
+                            updated = true;
+                            log.debug("DaemonSet [{}] updated while reconciling because of imagePullSecrets", daemonSet);
+                        }
                         if (updated) {
-                            updateDaemonSet(daemonSet, reconciledAffinity.orElse(null), reconciledTolerations);
+                            updateDaemonSet(daemonSet, reconciledAffinity.orElse(null), reconciledTolerations, reconciledImagePullSecrets);
                         }
                         return new Result(false);
                     }
@@ -93,37 +97,25 @@ public class DaemonSetReconciler implements Reconciler {
                 request);
     }
 
-    private void updateDaemonSet(V1DaemonSet target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations) throws ApiException {
+    private void updateDaemonSet(V1DaemonSet target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations, List<V1LocalObjectReference> imagePullSecrets) throws ApiException {
         V1DaemonSet updated = new V1DaemonSetBuilder(target)
                 .editSpec()
                 .editTemplate()
                 .editSpec()
                 .withAffinity(affinity)
                 .withTolerations(tolerations)
+                .withImagePullSecrets(imagePullSecrets)
                 .endSpec()
                 .endTemplate()
                 .endSpec()
                 .build();
-        this.appsV1Api.replaceNamespacedDaemonSet(
-                K8sObjectUtil.getName(updated),
-                K8sObjectUtil.getNamespace(updated),
-                updated,
-                null,
-                null,
-                null,
-                null);
+        this.appsV1Api.replaceNamespacedDaemonSet(K8sObjectUtil.getName(updated), K8sObjectUtil.getNamespace(updated), updated)
+                .execute();
     }
 
     private void deleteDaemonSet(String namespace, String name) throws ApiException {
-        this.appsV1Api.deleteNamespacedDaemonSet(
-                name,
-                namespace,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        this.appsV1Api.deleteNamespacedDaemonSet(name, namespace)
+                .execute();
     }
 
 }

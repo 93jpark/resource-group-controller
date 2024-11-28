@@ -42,7 +42,7 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
                     .map(projectName -> projectIndexer.getByKey(KeyUtil.buildKey(projectName)))
                     .filter(Objects::nonNull)
                     .flatMap(project ->
-                            Optional.ofNullable(resolveToCronJob(project.getNamespace()))
+                            Optional.of(resolveToCronJob(project.getNamespace()))
                                     .orElse(Collections.emptyList())
                                     .stream()
                                     .map(EventHandlerUtil::buildRequestFromNamespacedObject)
@@ -55,7 +55,7 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
             if (!oldObj.getProjects().equals(newObj.getProjects())) {
                 getAddedOrDeletedProjects(oldObj.getProjects(), newObj.getProjects())
                         .stream().map(projectName -> this.projectIndexer.getByKey(KeyUtil.buildKey(projectName)))
-                        .map(project -> this.resolveToCronJob(project.getNamespace()))
+                        .map(project -> this.resolveToCronJob(Objects.requireNonNull(project.getNamespace())))
                         .forEach(cronJobs -> {
                             cronJobs.stream()
                                     .map(EventHandlerUtil::buildRequestFromNamespacedObject)
@@ -66,7 +66,16 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
 
         @Override
         public void onDelete(V1alpha1ImageNamespaceGroupBinding obj, boolean deletedFinalStateUnknown) {
-
+            obj.getProjects().stream()
+                    .map(projectName -> projectIndexer.getByKey(KeyUtil.buildKey(projectName)))
+                    .filter(Objects::nonNull)
+                    .flatMap(project ->
+                            Optional.of(resolveToCronJob(project.getNamespace()))
+                                    .orElse(Collections.emptyList())
+                                    .stream()
+                                    .map(EventHandlerUtil::buildRequestFromNamespacedObject)
+                    )
+                    .forEach(queue::add);
         }
 
         private static Set<String> getAddedOrDeletedProjects(List<String> oldProjects, List<String> newProjects) {
@@ -79,6 +88,7 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
         }
 
         private List<V1CronJob> resolveToCronJob(String namespaceName) {
+            Objects.requireNonNull(namespaceName);
             return this.cronJobIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_CRON_JOB_OBJECT, namespaceName);
         }
 

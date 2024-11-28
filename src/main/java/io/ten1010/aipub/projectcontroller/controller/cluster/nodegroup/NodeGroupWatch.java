@@ -10,7 +10,6 @@ import io.ten1010.aipub.projectcontroller.controller.EventHandlerUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Objects;
 
 public class NodeGroupWatch implements ControllerWatch<V1alpha1NodeGroup> {
@@ -21,10 +20,6 @@ public class NodeGroupWatch implements ControllerWatch<V1alpha1NodeGroup> {
 
         private WorkQueue<Request> queue;
         private Indexer<V1Node> nodeIndexer;
-
-        private static List<String> getNodes(V1alpha1NodeGroup obj) {
-            return obj.getNodes();
-        }
 
         public EventHandler(WorkQueue<Request> queue, Indexer<V1Node> nodeIndexer) {
             this.queue = queue;
@@ -50,6 +45,7 @@ public class NodeGroupWatch implements ControllerWatch<V1alpha1NodeGroup> {
 
         @Override
         public void onDelete(V1alpha1NodeGroup obj, boolean deletedFinalStateUnknown) {
+            this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(obj));
         }
 
     }

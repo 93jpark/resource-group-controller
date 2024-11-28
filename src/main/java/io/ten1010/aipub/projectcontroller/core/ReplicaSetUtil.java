@@ -1,6 +1,7 @@
 package io.ten1010.aipub.projectcontroller.core;
 
 import io.kubernetes.client.openapi.models.V1Affinity;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1ReplicaSet;
 import io.kubernetes.client.openapi.models.V1Toleration;
 
@@ -31,6 +32,17 @@ public final class ReplicaSetUtil {
             return Optional.empty();
         }
         return Optional.of(affinity);
+    }
+
+    public static List<V1LocalObjectReference> getImagePullSecrets(V1ReplicaSet replicaSet) {
+        if (replicaSet.getSpec() == null ||
+                replicaSet.getSpec().getTemplate() == null ||
+                replicaSet.getSpec().getTemplate().getSpec() == null ||
+                replicaSet.getSpec().getTemplate().getSpec().getImagePullSecrets() == null) {
+            return new ArrayList<>();
+        }
+
+        return replicaSet.getSpec().getTemplate().getSpec().getImagePullSecrets();
     }
 
     private ReplicaSetUtil() {

@@ -9,14 +9,15 @@ import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1CronJob;
 import io.kubernetes.client.openapi.models.V1CronJobBuilder;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1Toleration;
+import io.ten1010.aipub.projectcontroller.controller.ControllerSupport;
+import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
+import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import io.ten1010.aipub.projectcontroller.core.ApiResourceKind;
 import io.ten1010.aipub.projectcontroller.core.CronJobUtil;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
-import io.ten1010.aipub.projectcontroller.controller.ControllerSupport;
-import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
-import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 
@@ -75,10 +76,13 @@ public class CronJobReconciler implements Reconciler {
                             updated = true;
                             log.debug("CronJob [{}] updated while reconciling because of tolerations", cronJobKey);
                         }
-                        // todo add reconciled podTemplate with imagePullSecret
-
+                        List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledCronJobImagePullSecrets(cronJob);
+                        if (!CronJobUtil.getImagePullSecrets(cronJob).equals(reconciledImagePullSecrets)) {
+                            updated = true;
+                            log.debug("CronJob [{}] updated while reconciling because of imagePullSecrets", cronJob);
+                        }
                         if (updated) {
-                            updateCronJob(cronJob, reconciledAffinity.orElse(null), reconciledTolerations);
+                            updateCronJob(cronJob, reconciledAffinity.orElse(null), reconciledTolerations, reconciledImagePullSecrets);
                         }
                         return new Result(false);
                     }
@@ -93,7 +97,7 @@ public class CronJobReconciler implements Reconciler {
                 request);
     }
 
-    private void updateCronJob(V1CronJob target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations) throws ApiException {
+    private void updateCronJob(V1CronJob target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations, List<V1LocalObjectReference> imagePullSecrets) throws ApiException {
         V1CronJob updated = new V1CronJobBuilder(target)
                 .editSpec()
                 .editJobTemplate()
@@ -102,32 +106,20 @@ public class CronJobReconciler implements Reconciler {
                 .editSpec()
                 .withAffinity(affinity)
                 .withTolerations(tolerations)
+                .withImagePullSecrets(imagePullSecrets)
                 .endSpec()
                 .endTemplate()
                 .endSpec()
                 .endJobTemplate()
                 .endSpec()
                 .build();
-        this.batchV1Api.replaceNamespacedCronJob(
-                K8sObjectUtil.getName(updated),
-                K8sObjectUtil.getNamespace(updated),
-                updated,
-                null,
-                null,
-                null,
-                null);
+        this.batchV1Api.replaceNamespacedCronJob(K8sObjectUtil.getName(updated), K8sObjectUtil.getNamespace(updated), updated)
+                .execute();
     }
 
     private void deleteCronJob(String namespace, String name) throws ApiException {
-        this.batchV1Api.deleteNamespacedCronJob(
-                name,
-                namespace,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        this.batchV1Api.deleteNamespacedCronJob(name, namespace)
+                .execute();
     }
 
 }

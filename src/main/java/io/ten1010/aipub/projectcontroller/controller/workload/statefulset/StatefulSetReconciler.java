@@ -7,6 +7,7 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.models.V1Affinity;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1StatefulSet;
 import io.kubernetes.client.openapi.models.V1StatefulSetBuilder;
 import io.kubernetes.client.openapi.models.V1Toleration;
@@ -16,6 +17,7 @@ import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import io.ten1010.aipub.projectcontroller.core.ApiResourceKind;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
+import io.ten1010.aipub.projectcontroller.core.ReplicationControllerUtil;
 import io.ten1010.aipub.projectcontroller.core.StatefulSetUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
@@ -75,9 +77,13 @@ public class StatefulSetReconciler implements Reconciler {
                             updated = true;
                             log.debug("StatefulSet [{}] updated while reconciling because of tolerations", statefulSetKey);
                         }
-                        // todo add reconciled podTemplate with imagePullSecret
+                        List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledStatefulSetImagePullSecrets(statefulSet);
+                        if (!StatefulSetUtil.getImagePullSecrets(statefulSet).equals(reconciledImagePullSecrets)) {
+                            updated = true;
+                            log.debug("StatefulSet [{}] updated while reconciling because of imagePullSecrets", statefulSetKey);
+                        }
                         if (updated) {
-                            updateStatefulSet(statefulSet, reconciledAffinity.orElse(null), reconciledTolerations);
+                            updateStatefulSet(statefulSet, reconciledAffinity.orElse(null), reconciledTolerations, reconciledImagePullSecrets);
                         }
                         return new Result(false);
                     }
@@ -92,37 +98,25 @@ public class StatefulSetReconciler implements Reconciler {
                 request);
     }
 
-    private void updateStatefulSet(V1StatefulSet target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations) throws ApiException {
+    private void updateStatefulSet(V1StatefulSet target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations, List<V1LocalObjectReference> imagePullSecrets) throws ApiException {
         V1StatefulSet updated = new V1StatefulSetBuilder(target)
                 .editSpec()
                 .editTemplate()
                 .editSpec()
                 .withAffinity(affinity)
                 .withTolerations(tolerations)
+                .withImagePullSecrets(imagePullSecrets)
                 .endSpec()
                 .endTemplate()
                 .endSpec()
                 .build();
-        this.appsV1Api.replaceNamespacedStatefulSet(
-                K8sObjectUtil.getName(updated),
-                K8sObjectUtil.getNamespace(updated),
-                updated,
-                null,
-                null,
-                null,
-                null);
+        this.appsV1Api.replaceNamespacedStatefulSet(K8sObjectUtil.getName(updated), K8sObjectUtil.getNamespace(updated), updated)
+                .execute();
     }
 
     private void deleteStatefulSet(String namespace, String name) throws ApiException {
-        this.appsV1Api.deleteNamespacedStatefulSet(
-                name,
-                namespace,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        this.appsV1Api.deleteNamespacedStatefulSet(name, namespace)
+                .execute();
     }
 
 }

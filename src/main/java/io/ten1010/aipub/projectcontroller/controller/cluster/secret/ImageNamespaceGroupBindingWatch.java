@@ -37,15 +37,14 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
                     .map(projectName -> Optional.ofNullable(projectIndexer.getByKey(KeyUtil.buildKey(projectName))))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
-                    .map(project -> buildRequest(
-                            Objects.requireNonNull(obj.getImageNamespaceGroupRef()),
-                            Objects.requireNonNull(project.getNamespace())
-                    ))
+                    .map(project -> buildRequest(obj.getImageNamespaceGroupRef(), project.getNamespace()))
                     .forEach(queue::add);
         }
 
         @Override
         public void onUpdate(V1alpha1ImageNamespaceGroupBinding oldObj, V1alpha1ImageNamespaceGroupBinding newObj) {
+            Objects.requireNonNull(oldObj.getImageNamespaceGroupRef(), "ImageNamespaceGroupRef must not be null");
+            Objects.requireNonNull(newObj.getImageNamespaceGroupRef(), "ImageNamespaceGroupRef must not be null");
             if (!oldObj.getImageNamespaceGroupRef().equals(newObj.getImageNamespaceGroupRef())) {
                 processGroupRefChange(oldObj).forEach(this.queue::add);
                 processGroupRefChange(newObj).forEach(this.queue::add);
@@ -58,7 +57,12 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
 
         @Override
         public void onDelete(V1alpha1ImageNamespaceGroupBinding obj, boolean deletedFinalStateUnknown) {
-
+            obj.getProjects().stream()
+                    .map(projectName -> Optional.ofNullable(projectIndexer.getByKey(KeyUtil.buildKey(projectName))))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .map(project -> buildRequest(obj.getImageNamespaceGroupRef(), project.getNamespace()))
+                    .forEach(queue::add);
         }
 
         private Request buildRequest(String imageNamespaceGroupRef, String projectNamespace) {

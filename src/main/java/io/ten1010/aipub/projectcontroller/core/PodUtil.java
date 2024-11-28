@@ -1,6 +1,7 @@
 package io.ten1010.aipub.projectcontroller.core;
 
 import io.kubernetes.client.openapi.models.V1Affinity;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1Toleration;
 
@@ -24,6 +25,15 @@ public final class PodUtil {
             return Optional.empty();
         }
         return Optional.of(affinity);
+    }
+
+    public static List<V1LocalObjectReference> getImagePullSecrets(V1Pod pod) {
+        if (pod.getSpec() == null ||
+                pod.getSpec().getImagePullSecrets() == null) {
+            return new ArrayList<>();
+        }
+
+        return pod.getSpec().getImagePullSecrets();
     }
 
     private PodUtil() {

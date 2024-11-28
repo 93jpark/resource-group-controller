@@ -1,6 +1,7 @@
 package io.ten1010.aipub.projectcontroller.core;
 
 import io.kubernetes.client.openapi.models.V1Affinity;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1ReplicationController;
 import io.kubernetes.client.openapi.models.V1Toleration;
 
@@ -31,6 +32,17 @@ public final class ReplicationControllerUtil {
             return Optional.empty();
         }
         return Optional.of(affinity);
+    }
+
+    public static List<V1LocalObjectReference> getImagePullSecrets(V1ReplicationController replicationController) {
+        if (replicationController.getSpec() == null ||
+                replicationController.getSpec().getTemplate() == null ||
+                replicationController.getSpec().getTemplate().getSpec() == null ||
+                replicationController.getSpec().getTemplate().getSpec().getImagePullSecrets() == null) {
+            return new ArrayList<>();
+        }
+
+        return replicationController.getSpec().getTemplate().getSpec().getImagePullSecrets();
     }
 
     private ReplicationControllerUtil() {

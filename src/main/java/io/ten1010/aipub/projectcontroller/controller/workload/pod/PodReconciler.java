@@ -7,6 +7,7 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Affinity;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1Toleration;
 import io.ten1010.aipub.projectcontroller.controller.ControllerSupport;
@@ -73,10 +74,14 @@ public class PodReconciler implements Reconciler {
                     log.debug("Pod [{}] deleted while reconciling because of tolerations", podKey);
                     return new Result(false);
                 }
+                List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledPodImagePullSecrets(pod);
+                if (!PodUtil.getImagePullSecrets(pod).equals(reconciledImagePullSecrets)) {
+                    deletePod(K8sObjectUtil.getNamespace(pod), K8sObjectUtil.getName(pod));
+                    log.debug("Pod [{}] deleted while reconciling because of imagePullSecrets", podKey);
+                    return new Result(false);
+                }
                 return new Result(false);
             }
-
-            // todo add imagePullSecret checking
             ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(pod));
             if (ControllerSupport.isSupportedControllerOfPod(controllerKind)) {
                 return new Result(false);
@@ -88,15 +93,8 @@ public class PodReconciler implements Reconciler {
     }
 
     private void deletePod(String namespace, String name) throws ApiException {
-        this.coreV1Api.deleteNamespacedPod(
-                name,
-                namespace,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        this.coreV1Api.deleteNamespacedPod(name, namespace)
+                .execute();
     }
 
 }

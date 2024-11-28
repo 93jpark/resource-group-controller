@@ -79,7 +79,6 @@ public class ImageNamespaceGroupBindingReconciler implements Reconciler {
                                     log.debug("Project [{}] not founded while reconciling", projectKey);
                                 }
                             });
-
                     return new Result(false);
                 }, request);
     }

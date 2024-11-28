@@ -2,6 +2,7 @@ package io.ten1010.aipub.projectcontroller.core;
 
 import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1Deployment;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1Toleration;
 
 import java.util.ArrayList;
@@ -31,6 +32,17 @@ public final class DeploymentUtil {
             return Optional.empty();
         }
         return Optional.of(affinity);
+    }
+
+    public static List<V1LocalObjectReference> getImagePullSecrets(V1Deployment deployment) {
+        if (deployment.getSpec() == null ||
+                deployment.getSpec().getTemplate() == null ||
+                deployment.getSpec().getTemplate().getSpec() == null ||
+                deployment.getSpec().getTemplate().getSpec().getImagePullSecrets() == null) {
+            return new ArrayList<>();
+        }
+
+        return deployment.getSpec().getTemplate().getSpec().getImagePullSecrets();
     }
 
     private DeploymentUtil() {

@@ -36,6 +36,7 @@ public class NodeGroupBindingReconciler implements Reconciler {
     }
     @Override
     public Result reconcile(Request request) {
+        // todo complete NodeGroupBinding reconciliation
         return null;
     }
 }

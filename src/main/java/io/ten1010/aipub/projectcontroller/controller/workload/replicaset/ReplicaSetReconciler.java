@@ -7,6 +7,7 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.models.V1Affinity;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1ReplicaSet;
 import io.kubernetes.client.openapi.models.V1ReplicaSetBuilder;
 import io.kubernetes.client.openapi.models.V1Toleration;
@@ -75,9 +76,13 @@ public class ReplicaSetReconciler implements Reconciler {
                             updated = true;
                             log.debug("ReplicaSet [{}] updated while reconciling because of tolerations", replicaSetKey);
                         }
-                        // todo add reconciled podTemplate with imagePullSecret
+                        List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledReplicaSetImagePullSecrets(replicaSet);
+                        if (!ReplicaSetUtil.getImagePullSecrets(replicaSet).equals(reconciledImagePullSecrets)) {
+                            updated = true;
+                            log.debug("ReplicaSet [{}] updated while reconciling because of imagePullSecrets", replicaSetKey);
+                        }
                         if (updated) {
-                            updateReplicaSet(replicaSet, reconciledAffinity.orElse(null), reconciledTolerations);
+                            updateReplicaSet(replicaSet, reconciledAffinity.orElse(null), reconciledTolerations, reconciledImagePullSecrets);
                         }
                         return new Result(false);
                     }
@@ -92,37 +97,25 @@ public class ReplicaSetReconciler implements Reconciler {
                 request);
     }
 
-    private void updateReplicaSet(V1ReplicaSet target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations) throws ApiException {
+    private void updateReplicaSet(V1ReplicaSet target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations, List<V1LocalObjectReference> imagePullSecrets) throws ApiException {
         V1ReplicaSet updated = new V1ReplicaSetBuilder(target)
                 .editSpec()
                 .editTemplate()
                 .editSpec()
                 .withAffinity(affinity)
                 .withTolerations(tolerations)
+                .withImagePullSecrets(imagePullSecrets)
                 .endSpec()
                 .endTemplate()
                 .endSpec()
                 .build();
-        this.appsV1Api.replaceNamespacedReplicaSet(
-                K8sObjectUtil.getName(updated),
-                K8sObjectUtil.getNamespace(updated),
-                updated,
-                null,
-                null,
-                null,
-                null);
+        this.appsV1Api.replaceNamespacedReplicaSet(K8sObjectUtil.getName(updated), K8sObjectUtil.getNamespace(updated), updated)
+                .execute();
     }
 
     private void deleteReplicaSet(String namespace, String name) throws ApiException {
-        this.appsV1Api.deleteNamespacedReplicaSet(
-                name,
-                namespace,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        this.appsV1Api.deleteNamespacedReplicaSet(name, namespace)
+                .execute();
     }
 
 }

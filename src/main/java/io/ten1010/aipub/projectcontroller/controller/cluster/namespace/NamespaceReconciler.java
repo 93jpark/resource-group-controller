@@ -4,8 +4,11 @@ import io.kubernetes.client.extended.controller.reconciler.Reconciler;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.controller.reconciler.Result;
 import io.kubernetes.client.informer.cache.Indexer;
+import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Namespace;
+import io.kubernetes.client.openapi.models.V1NamespaceBuilder;
+import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
 
@@ -38,10 +41,18 @@ public class NamespaceReconciler implements Reconciler {
                     String namespaceKey = request.getName();
                     V1Namespace namespace = this.namespaceIndexer.getByKey(namespaceKey);
                     if (namespace == null) {
+                        createNamespace(namespaceKey);
                         return new Result(false);
                     }
                     return new Result(true);
                 }, request);
+    }
+
+    private void createNamespace(String namespaceName) throws ApiException {
+        V1Namespace newNamespace = new V1Namespace()
+                .metadata(new V1ObjectMeta().name(namespaceName));
+        coreV1Api.createNamespace(newNamespace)
+                .execute();
     }
 
 

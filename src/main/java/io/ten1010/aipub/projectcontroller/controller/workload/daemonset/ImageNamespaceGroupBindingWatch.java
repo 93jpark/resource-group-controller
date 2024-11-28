@@ -42,7 +42,7 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
                     .map(projectName -> projectIndexer.getByKey(KeyUtil.buildKey(projectName)))
                     .filter(Objects::nonNull)
                     .flatMap(project ->
-                            Optional.ofNullable(resolveToDaemonSet(project.getNamespace()))
+                            Optional.of(resolveToDaemonSet(project.getNamespace()))
                                     .orElse(Collections.emptyList())
                                     .stream()
                                     .map(EventHandlerUtil::buildRequestFromNamespacedObject)
@@ -66,7 +66,16 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
 
         @Override
         public void onDelete(V1alpha1ImageNamespaceGroupBinding obj, boolean deletedFinalStateUnknown) {
-
+            obj.getProjects().stream()
+                    .map(projectName -> projectIndexer.getByKey(KeyUtil.buildKey(projectName)))
+                    .filter(Objects::nonNull)
+                    .flatMap(project ->
+                            Optional.of(resolveToDaemonSet(project.getNamespace()))
+                                    .orElse(Collections.emptyList())
+                                    .stream()
+                                    .map(EventHandlerUtil::buildRequestFromNamespacedObject)
+                    )
+                    .forEach(queue::add);
         }
 
         private static Set<String> getAddedOrDeletedProjects(List<String> oldProjects, List<String> newProjects) {
@@ -79,6 +88,7 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
         }
 
         private List<V1DaemonSet> resolveToDaemonSet(String namespaceName) {
+            Objects.requireNonNull(namespaceName);
             return this.daemonSetIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_DAEMON_SET_OBJECT, namespaceName);
         }
 

@@ -1,6 +1,7 @@
 package io.ten1010.aipub.projectcontroller.core;
 
 import io.kubernetes.client.openapi.models.V1Affinity;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1StatefulSet;
 import io.kubernetes.client.openapi.models.V1Toleration;
 
@@ -31,6 +32,17 @@ public final class StatefulSetUtil {
             return Optional.empty();
         }
         return Optional.of(affinity);
+    }
+
+    public static List<V1LocalObjectReference> getImagePullSecrets(V1StatefulSet statefulSet) {
+        if (statefulSet.getSpec() == null ||
+                statefulSet.getSpec().getTemplate() == null ||
+                statefulSet.getSpec().getTemplate().getSpec() == null ||
+                statefulSet.getSpec().getTemplate().getSpec().getImagePullSecrets() == null) {
+            return new ArrayList<>();
+        }
+
+        return statefulSet.getSpec().getTemplate().getSpec().getImagePullSecrets();
     }
 
     private StatefulSetUtil() {

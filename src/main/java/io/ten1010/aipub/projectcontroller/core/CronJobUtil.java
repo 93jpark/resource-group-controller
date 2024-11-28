@@ -2,6 +2,7 @@ package io.ten1010.aipub.projectcontroller.core;
 
 import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1CronJob;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1Toleration;
 
 import java.util.ArrayList;
@@ -35,6 +36,20 @@ public final class CronJobUtil {
             return Optional.empty();
         }
         return Optional.of(affinity);
+    }
+
+    public static List<V1LocalObjectReference> getImagePullSecrets(V1CronJob cronJob) {
+        if (cronJob.getSpec() == null ||
+                cronJob.getSpec().getJobTemplate() == null ||
+                cronJob.getSpec().getJobTemplate().getSpec() == null ||
+                cronJob.getSpec().getJobTemplate().getSpec().getTemplate() == null ||
+                cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec() == null ||
+                cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec().getImagePullSecrets() == null
+        ) {
+            return new ArrayList<>();
+        }
+
+        return cronJob.getSpec().getJobTemplate().getSpec().getTemplate().getSpec().getImagePullSecrets();
     }
 
     private CronJobUtil() {

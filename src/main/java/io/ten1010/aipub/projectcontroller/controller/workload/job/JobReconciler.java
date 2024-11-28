@@ -8,6 +8,7 @@ import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.models.V1Affinity;
 import io.kubernetes.client.openapi.models.V1Job;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1Toleration;
 import io.ten1010.aipub.projectcontroller.controller.ControllerSupport;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
@@ -67,8 +68,12 @@ public class JobReconciler implements Reconciler {
                     log.debug("Job [{}] deleted while reconciling because of tolerations", jobKey);
                     return new Result(false);
                 }
-                // todo add reconciled podTemplate with imagePullSecret
-
+                List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledJobImagePullSecrets(job);
+                if (!JobUtil.getImagePullSecrets(job).equals(reconciledImagePullSecrets)) {
+                    deleteJob(K8sObjectUtil.getNamespace(job), K8sObjectUtil.getName(job));
+                    log.debug("Job [{}] deleted while reconciling because of imagePullSecrets", jobKey);
+                    return new Result(false);
+                }
                 return new Result(false);
             }
             ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(job));
@@ -82,15 +87,8 @@ public class JobReconciler implements Reconciler {
     }
 
     private void deleteJob(String namespace, String name) throws ApiException {
-        this.batchV1Api.deleteNamespacedJob(
-                name,
-                namespace,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        this.batchV1Api.deleteNamespacedJob(name, namespace)
+                .execute();
     }
 
 }

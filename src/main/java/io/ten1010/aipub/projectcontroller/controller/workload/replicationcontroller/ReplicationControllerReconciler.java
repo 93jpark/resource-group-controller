@@ -7,16 +7,17 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Affinity;
+import io.kubernetes.client.openapi.models.V1LocalObjectReference;
 import io.kubernetes.client.openapi.models.V1ReplicationController;
 import io.kubernetes.client.openapi.models.V1ReplicationControllerBuilder;
 import io.kubernetes.client.openapi.models.V1Toleration;
+import io.ten1010.aipub.projectcontroller.controller.ControllerSupport;
+import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
+import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import io.ten1010.aipub.projectcontroller.core.ApiResourceKind;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
 import io.ten1010.aipub.projectcontroller.core.ReplicationControllerUtil;
-import io.ten1010.aipub.projectcontroller.controller.ControllerSupport;
-import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
-import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.Nullable;
 
@@ -75,10 +76,13 @@ public class ReplicationControllerReconciler implements Reconciler {
                             updated = true;
                             log.debug("ReplicationController [{}] updated while reconciling because of tolerations", replicationControllerKey);
                         }
-                        // todo add reconciled podTemplate with imagePullSecret
-
+                        List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledReplicationControllerImagePullSecrets(replicationController);
+                        if (!ReplicationControllerUtil.getImagePullSecrets(replicationController).equals(reconciledImagePullSecrets)) {
+                            updated = true;
+                            log.debug("ReplicationController [{}] updated while reconciling because of imagePullSecrets", replicationControllerKey);
+                        }
                         if (updated) {
-                            updateReplicationController(replicationController, reconciledAffinity.orElse(null), reconciledTolerations);
+                            updateReplicationController(replicationController, reconciledAffinity.orElse(null), reconciledTolerations, reconciledImagePullSecrets);
                         }
                         return new Result(false);
                     }
@@ -93,37 +97,25 @@ public class ReplicationControllerReconciler implements Reconciler {
                 request);
     }
 
-    private void updateReplicationController(V1ReplicationController target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations) throws ApiException {
+    private void updateReplicationController(V1ReplicationController target, @Nullable V1Affinity affinity, List<V1Toleration> tolerations, List<V1LocalObjectReference> imagePullSecrets) throws ApiException {
         V1ReplicationController updated = new V1ReplicationControllerBuilder(target)
                 .editSpec()
                 .editTemplate()
                 .editSpec()
                 .withAffinity(affinity)
                 .withTolerations(tolerations)
+                .withImagePullSecrets(imagePullSecrets)
                 .endSpec()
                 .endTemplate()
                 .endSpec()
                 .build();
-        this.coreV1Api.replaceNamespacedReplicationController(
-                K8sObjectUtil.getName(updated),
-                K8sObjectUtil.getNamespace(updated),
-                updated,
-                null,
-                null,
-                null,
-                null);
+        this.coreV1Api.replaceNamespacedReplicationController(K8sObjectUtil.getName(updated), K8sObjectUtil.getNamespace(updated), updated)
+                .execute();
     }
 
     private void deleteReplicationController(String namespace, String name) throws ApiException {
-        this.coreV1Api.deleteNamespacedReplicationController(
-                name,
-                namespace,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        this.coreV1Api.deleteNamespacedReplicationController(name, namespace)
+                .execute();
     }
 
 }
