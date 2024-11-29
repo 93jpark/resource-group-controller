@@ -15,7 +15,6 @@ import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -70,9 +69,8 @@ public class ImageNamespaceGroupBindingReconciler implements Reconciler {
                         return new Result(false);
                     }
 
-                    List<String> projectNameList = imageNamespaceGroupBinding.getProjects();
-                    projectNameList.stream()
-                            .map(KeyUtil::buildKey)
+                    imageNamespaceGroupBinding.getProjects()
+                            .stream().map(KeyUtil::buildKey)
                             .forEach(projectKey -> {
                                 Optional<V1alpha1Project> projectOpt = Optional.ofNullable(this.projectIndexer.getByKey(projectKey));
                                 if (projectOpt.isEmpty()) {

@@ -110,7 +110,7 @@ public class NodeReconciler implements Reconciler {
             }
             log.debug("Node [{}] founded while reconciling\n{}", nodeKey, node.toString());
 
-            List<V1alpha1NodeGroup> groups = this.groupIndexer.byIndex(IndexNames.BY_NODE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getName(node));
+            List<V1alpha1NodeGroup> groups = this.groupIndexer.byIndex(IndexNames.BY_NODE_NAME_TO_NODE_GROUP_OBJECT, K8sObjectUtil.getName(node));
             if (groups.size() > 1) {
                 for (V1alpha1NodeGroup g : groups) {
                     this.eventRecorder.event(

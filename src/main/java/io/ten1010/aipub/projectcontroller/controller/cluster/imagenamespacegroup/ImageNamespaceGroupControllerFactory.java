@@ -51,7 +51,7 @@ public class ImageNamespaceGroupControllerFactory {
                         this.imageNamespaceGroupApi,
                         this.coreV1Api,
                         this.registryRobotService,
-                        this.projectProperties.getSecretNamespace()))
+                        this.projectProperties.getRegistrySecretNamespace()))
                 .build();
     }
 

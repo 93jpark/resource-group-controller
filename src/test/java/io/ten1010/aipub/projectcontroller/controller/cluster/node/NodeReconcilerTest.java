@@ -53,7 +53,7 @@ class NodeReconcilerTest {
         nodeSpec1.setTaints(new ArrayList<>());
         node1.setSpec(nodeSpec1);
 
-        Mockito.doReturn(List.of(group1)).when(this.groupIndexer).byIndex(IndexNames.BY_NODE_NAME_TO_GROUP_OBJECT, "node1");
+        Mockito.doReturn(List.of(group1)).when(this.groupIndexer).byIndex(IndexNames.BY_NODE_NAME_TO_NODE_GROUP_OBJECT, "node1");
         Mockito.doReturn(node1).when(this.nodeIndexer).getByKey("node1");
         NodeReconciler nodeReconciler = new NodeReconciler(this.nodeIndexer, this.groupIndexer, this.coreV1Api, this.eventRecorder);
         nodeReconciler.reconcile(new Request("node1"));
@@ -116,7 +116,7 @@ class NodeReconcilerTest {
 
         node1.setSpec(nodeSpec1);
 
-        Mockito.doReturn(List.of(group1)).when(this.groupIndexer).byIndex(IndexNames.BY_NODE_NAME_TO_GROUP_OBJECT, "node1");
+        Mockito.doReturn(List.of(group1)).when(this.groupIndexer).byIndex(IndexNames.BY_NODE_NAME_TO_NODE_GROUP_OBJECT, "node1");
         Mockito.doReturn(node1).when(this.nodeIndexer).getByKey("node1");
 
         NodeReconciler nodeReconciler = new NodeReconciler(this.nodeIndexer, this.groupIndexer, this.coreV1Api, this.eventRecorder);

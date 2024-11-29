@@ -4,8 +4,7 @@ import io.kubernetes.client.extended.controller.ControllerWatch;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.ResourceEventHandler;
-import io.kubernetes.client.informer.cache.Indexer;
-import io.kubernetes.client.openapi.models.V1Namespace;
+import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
 
 import java.time.Duration;
@@ -24,25 +23,26 @@ public class ProjectWatch implements ControllerWatch<V1alpha1Project> {
 
         @Override
         public void onAdd(V1alpha1Project obj) {
-            if (obj.getNamespace() != null) {
-                this.queue.add(buildRequestFromProject(obj.getNamespace()));
-            }
+            this.queue.add(buildRequestFromProject(obj));
         }
 
         @Override
         public void onUpdate(V1alpha1Project oldObj, V1alpha1Project newObj) {
-            if (newObj.getNamespace() != null) {
-                this.queue.add(buildRequestFromProject(newObj.getNamespace()));
+            String newProjectName = K8sObjectUtil.getName(newObj);
+            String oldProjectName = K8sObjectUtil.getName(oldObj);
+            if (!newProjectName.equals(oldProjectName)) {
+                this.queue.add(buildRequestFromProject(newObj));
+                this.queue.add(buildRequestFromProject(oldObj));
             }
         }
 
         @Override
         public void onDelete(V1alpha1Project obj, boolean deletedFinalStateUnknown) {
-            // todo project삭제되더라도 해당 ns는 그대로 유지?
+            this.queue.add(buildRequestFromProject(obj));
         }
 
-        private Request buildRequestFromProject(String namespace) {
-            return new Request(namespace);
+        private Request buildRequestFromProject(V1alpha1Project project) {
+            return new Request(K8sObjectUtil.getName(project));
         }
 
     }

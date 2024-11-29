@@ -36,6 +36,7 @@ public class DaemonSetControllerFactory {
                 .withWorkerCount(1)
                 .watch(workQueue -> new ImageNamespaceGroupBindingWatch(workQueue, this.daemonSetIndexer, this.projectIndexer))
                 .watch(workQueue -> new NodeGroupBindingWatch(workQueue, this.daemonSetIndexer, this.projectIndexer))
+                .watch(workQueue -> new NodeGroupWatch(workQueue, this.daemonSetIndexer))
                 .watch(DaemonSetWatch::new)
                 .withReconciler(new DaemonSetReconciler(this.daemonSetIndexer, this.reconciliation, this.k8sApis.getAppsV1Api()))
                 .build();

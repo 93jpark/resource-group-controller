@@ -31,7 +31,7 @@ public class NamespaceWatch implements ControllerWatch<V1Namespace> {
 
         @Override
         public void onAdd(V1Namespace obj) {
-            List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, K8sObjectUtil.getName(obj));
+            List<V1Beta1ResourceGroup> groups = this.groupIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, K8sObjectUtil.getName(obj));
             groups.stream()
                     .map(group -> {
                         String bindingName = new ResourceGroupRoleBindingName(K8sObjectUtil.getName(group)).getName();

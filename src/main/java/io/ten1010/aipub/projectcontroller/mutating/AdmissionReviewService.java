@@ -176,10 +176,12 @@ public class AdmissionReviewService {
         if (!K8sObjectUtil.isControlled(cronJob)) {
             Optional<V1Affinity> reconciledAffinity = this.reconciliation.reconcileUncontrolledCronJobAffinity(cronJob);
             List<V1Toleration> reconciledTolerations = this.reconciliation.reconcileUncontrolledCronJobTolerations(cronJob);
+            List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledCronJobImagePullSecrets(cronJob);
             return buildJsonPatchResponse(
                     request.getUid(),
                     new ReplaceJsonPatchElement("/spec/jobTemplate/spec/template/spec/affinity", MAPPER.valueToTree(reconciledAffinity.orElse(null))),
-                    new ReplaceJsonPatchElement("/spec/jobTemplate/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)));
+                    new ReplaceJsonPatchElement("/spec/jobTemplate/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)),
+                    new ReplaceJsonPatchElement("/spec/jobTemplate/spec/template/spec/imagePullSecrets", MAPPER.valueToTree(reconciledImagePullSecrets)));
         }
         ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(cronJob));
         if (ControllerSupport.isSupportedControllerOfCronJob(controllerKind)) {
@@ -195,10 +197,12 @@ public class AdmissionReviewService {
         if (!K8sObjectUtil.isControlled(daemonSet)) {
             Optional<V1Affinity> reconciledAffinity = this.reconciliation.reconcileUncontrolledDaemonSetAffinity(daemonSet);
             List<V1Toleration> reconciledTolerations = this.reconciliation.reconcileUncontrolledDaemonSetTolerations(daemonSet);
+            List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledDaemonSetImagePullSecrets(daemonSet);
             return buildJsonPatchResponse(
                     request.getUid(),
                     new ReplaceJsonPatchElement("/spec/template/spec/affinity", MAPPER.valueToTree(reconciledAffinity.orElse(null))),
-                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)));
+                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)),
+                    new ReplaceJsonPatchElement("/spec/template/spec/imagePullSecrets", MAPPER.valueToTree(reconciledImagePullSecrets)));
         }
         ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(daemonSet));
         if (ControllerSupport.isSupportedControllerOfDaemonSet(controllerKind)) {
@@ -214,10 +218,12 @@ public class AdmissionReviewService {
         if (!K8sObjectUtil.isControlled(deployment)) {
             Optional<V1Affinity> reconciledAffinity = this.reconciliation.reconcileUncontrolledDeploymentAffinity(deployment);
             List<V1Toleration> reconciledTolerations = this.reconciliation.reconcileUncontrolledDeploymentTolerations(deployment);
+            List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledDeploymentImagePullSecrets(deployment);
             return buildJsonPatchResponse(
                     request.getUid(),
                     new ReplaceJsonPatchElement("/spec/template/spec/affinity", MAPPER.valueToTree(reconciledAffinity.orElse(null))),
-                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)));
+                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)),
+                    new ReplaceJsonPatchElement("/spec/template/spec/imagePullSecrets", MAPPER.valueToTree(reconciledImagePullSecrets)));
         }
         ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(deployment));
         if (ControllerSupport.isSupportedControllerOfDeployment(controllerKind)) {
@@ -233,10 +239,12 @@ public class AdmissionReviewService {
         if (!K8sObjectUtil.isControlled(job)) {
             Optional<V1Affinity> reconciledAffinity = this.reconciliation.reconcileUncontrolledJobAffinity(job);
             List<V1Toleration> reconciledTolerations = this.reconciliation.reconcileUncontrolledJobTolerations(job);
+            List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledJobImagePullSecrets(job);
             return buildJsonPatchResponse(
                     request.getUid(),
                     new ReplaceJsonPatchElement("/spec/template/spec/affinity", MAPPER.valueToTree(reconciledAffinity.orElse(null))),
-                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)));
+                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)),
+                    new ReplaceJsonPatchElement("/spec/template/spec/imagePullSecrets", MAPPER.valueToTree(reconciledImagePullSecrets)));
         }
         ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(job));
         if (ControllerSupport.isSupportedControllerOfJob(controllerKind)) {
@@ -252,10 +260,12 @@ public class AdmissionReviewService {
         if (!K8sObjectUtil.isControlled(pod)) {
             Optional<V1Affinity> reconciledAffinity = this.reconciliation.reconcileUncontrolledPodAffinity(pod);
             List<V1Toleration> reconciledTolerations = this.reconciliation.reconcileUncontrolledPodTolerations(pod);
+            List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledPodImagePullSecrets(pod);
             return buildJsonPatchResponse(
                     request.getUid(),
                     new ReplaceJsonPatchElement("/spec/affinity", MAPPER.valueToTree(reconciledAffinity.orElse(null))),
-                    new ReplaceJsonPatchElement("/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)));
+                    new ReplaceJsonPatchElement("/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)),
+                    new ReplaceJsonPatchElement("/spec/imagePullSecrets", MAPPER.valueToTree(reconciledImagePullSecrets)));
         }
         ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(pod));
         if (ControllerSupport.isSupportedControllerOfPod(controllerKind)) {
@@ -271,10 +281,12 @@ public class AdmissionReviewService {
         if (!K8sObjectUtil.isControlled(replicaSet)) {
             Optional<V1Affinity> reconciledAffinity = this.reconciliation.reconcileUncontrolledReplicaSetAffinity(replicaSet);
             List<V1Toleration> reconciledTolerations = this.reconciliation.reconcileUncontrolledReplicaSetTolerations(replicaSet);
+            List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledReplicaSetImagePullSecrets(replicaSet);
             return buildJsonPatchResponse(
                     request.getUid(),
                     new ReplaceJsonPatchElement("/spec/template/spec/affinity", MAPPER.valueToTree(reconciledAffinity.orElse(null))),
-                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)));
+                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)),
+                    new ReplaceJsonPatchElement("/spec/template/spec/imagePullSecrets", MAPPER.valueToTree(reconciledImagePullSecrets)));
         }
         ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(replicaSet));
         if (ControllerSupport.isSupportedControllerOfReplicaSet(controllerKind)) {
@@ -290,10 +302,12 @@ public class AdmissionReviewService {
         if (!K8sObjectUtil.isControlled(replicationController)) {
             Optional<V1Affinity> reconciledAffinity = this.reconciliation.reconcileUncontrolledReplicationControllerAffinity(replicationController);
             List<V1Toleration> reconciledTolerations = this.reconciliation.reconcileUncontrolledReplicationControllerTolerations(replicationController);
+            List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledReplicationControllerImagePullSecrets(replicationController);
             return buildJsonPatchResponse(
                     request.getUid(),
                     new ReplaceJsonPatchElement("/spec/template/spec/affinity", MAPPER.valueToTree(reconciledAffinity.orElse(null))),
-                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)));
+                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)),
+                    new ReplaceJsonPatchElement("/spec/template/spec/imagePullSecrets", MAPPER.valueToTree(reconciledImagePullSecrets)));
         }
         ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(replicationController));
         if (ControllerSupport.isSupportedControllerOfReplicationController(controllerKind)) {
@@ -309,10 +323,12 @@ public class AdmissionReviewService {
         if (!K8sObjectUtil.isControlled(statefulSet)) {
             Optional<V1Affinity> reconciledAffinity = this.reconciliation.reconcileUncontrolledStatefulSetAffinity(statefulSet);
             List<V1Toleration> reconciledTolerations = this.reconciliation.reconcileUncontrolledStatefulSetTolerations(statefulSet);
+            List<V1LocalObjectReference> reconciledImagePullSecrets = this.reconciliation.reconcileUncontrolledStatefulSetImagePullSecrets(statefulSet);
             return buildJsonPatchResponse(
                     request.getUid(),
                     new ReplaceJsonPatchElement("/spec/template/spec/affinity", MAPPER.valueToTree(reconciledAffinity.orElse(null))),
-                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)));
+                    new ReplaceJsonPatchElement("/spec/template/spec/tolerations", MAPPER.valueToTree(reconciledTolerations)),
+                    new ReplaceJsonPatchElement("/spec/template/spec/imagePullSecrets", MAPPER.valueToTree(reconciledImagePullSecrets)));
         }
         ApiResourceKind controllerKind = K8sObjectUtil.getApiResourceKind(K8sObjectUtil.getControllerReference(statefulSet));
         if (ControllerSupport.isSupportedControllerOfStatefulSet(controllerKind)) {

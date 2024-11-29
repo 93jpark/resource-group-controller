@@ -259,6 +259,7 @@ public class Reconciliation {
 
     /**
      * Reconcile image pull secrets of workload with project image pull secrets.
+     *
      * @param existingImagePullSecrets
      * @param projectImagePullSecrets
      * @return
@@ -282,25 +283,25 @@ public class Reconciliation {
         return reconciledImagePullSecrets;
     }
 
+    private Indexer<V1alpha1Project> projectIndexer;
     private Indexer<V1alpha1NodeGroup> nodeGroupIndexer;
     private Indexer<V1alpha1NodeGroupBinding> nodeGroupBindingIndexer;
-    private Indexer<V1alpha1Project> projectIndexer;
-    private Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer;
     private Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer;
+    private Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer;
     private Indexer<V1Secret> secretIndexer;
 
     public Reconciliation(
+            Indexer<V1alpha1Project> projectIndexer,
             Indexer<V1alpha1NodeGroup> nodeGroupIndexer,
             Indexer<V1alpha1NodeGroupBinding> nodeGroupBindingIndexer,
-            Indexer<V1alpha1Project> projectIndexer,
-            Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer,
             Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer,
+            Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer,
             Indexer<V1Secret> secretIndexer) {
+        this.projectIndexer = projectIndexer;
         this.nodeGroupIndexer = nodeGroupIndexer;
         this.nodeGroupBindingIndexer = nodeGroupBindingIndexer;
-        this.projectIndexer = projectIndexer;
-        this.imageNamespaceGroupBindingIndexer = imageNamespaceGroupBindingIndexer;
         this.imageNamespaceGroupIndexer = imageNamespaceGroupIndexer;
+        this.imageNamespaceGroupBindingIndexer = imageNamespaceGroupBindingIndexer;
         this.secretIndexer = secretIndexer;
     }
 
@@ -317,7 +318,7 @@ public class Reconciliation {
         if (K8sObjectUtil.isControlled(daemonSet)) {
             throw new IllegalArgumentException();
         }
-        // todo daemonSet reconciler 재확인 필요
+
         return DaemonSetUtil.getAffinity(daemonSet);
     }
 
@@ -388,12 +389,16 @@ public class Reconciliation {
         if (K8sObjectUtil.isControlled(daemonSet)) {
             throw new IllegalArgumentException();
         }
-        List<V1alpha1NodeGroup> nodeGroupsContainingNamespace = this.resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(daemonSet));
-        // todo NodeGroup이 지닌 DaemonSet 목록을 가져오는 로직 수정
+        List<V1alpha1NodeGroup> nodeGroupsContainingNamespace = resolveNodeGroupByNamespace(K8sObjectUtil.getNamespace(daemonSet));
         List<V1alpha1NodeGroup> groupsContainingDaemonSet = this.nodeGroupIndexer.byIndex(
-                IndexNames.BY_DAEMON_SET_KEY_TO_GROUP_OBJECT,
+                IndexNames.BY_DAEMON_SET_KEY_TO_NODE_GROUP_OBJECT,
                 KeyUtil.buildKey(K8sObjectUtil.getNamespace(daemonSet), K8sObjectUtil.getName(daemonSet)));
-        List<V1alpha1NodeGroup> nodeGroups = Stream.concat(nodeGroupsContainingNamespace.stream(), groupsContainingDaemonSet.stream())
+        List<V1alpha1NodeGroup> groupsAllowAllDaemonSets = this.nodeGroupIndexer.byIndex(
+                IndexNames.BY_ALLOW_ALL_DAEMON_SET_POLICY_TO_NODE_GROUP_OBJECT,
+                String.valueOf(Boolean.TRUE));
+
+        List<V1alpha1NodeGroup> nodeGroups = Stream.of(nodeGroupsContainingNamespace.stream(), groupsContainingDaemonSet.stream(), groupsAllowAllDaemonSets.stream())
+                .flatMap(stream -> stream)
                 .distinct()
                 .collect(Collectors.toList());
 
@@ -528,31 +533,28 @@ public class Reconciliation {
 
     /**
      * 주어진 namespace에 속한 project에 바인딩되어있는 ImageNamespaceGroup Secret들을 반환함.
+     *
      * @param namespace
      * @return
      */
     private List<V1Secret> resolveProjectImagePullSecretsByNamespace(String namespace) {
-        // todo 워크로드의 namespace -> project -> imageNamespaceGroupBinding -> imageNamespaceGroup -> secret
-        List<V1alpha1Project> projects = this.projectIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT, namespace);
-        List<V1alpha1ImageNamespaceGroup> imageNamespaceGroups = resolveImageNamespaceGroupBindingsByProjects(projects);
+        V1alpha1Project project = this.projectIndexer.getByKey(KeyUtil.buildKey(namespace));
+        List<V1alpha1ImageNamespaceGroup> imageNamespaceGroups = resolveImageNamespaceGroupBindingsByProject(project);
         return resolveNamespacedImageNamespaceGroupSecrets(imageNamespaceGroups, namespace);
     }
 
     /**
      * 주어진 project들에 바인딩되어있는 ImageNamespaceGroup들을 반환함.
-     * @param projects
+     *
+     * @param project
      * @return
      */
-    private List<V1alpha1ImageNamespaceGroup> resolveImageNamespaceGroupBindingsByProjects(List<V1alpha1Project> projects) {
-        return projects.stream()
-                .map(K8sObjectUtil::getName)
-                .flatMap(projectName -> imageNamespaceGroupBindingIndexer
-                        .byIndex(IndexNames.BY_PROJECT_NAME_TO_IMAGE_NAMESPACE_GROUP_BINDING_OBJECT, projectName)
-                        .stream())
-                .map(binding -> {
-                    Objects.requireNonNull(binding.getImageNamespaceGroupRef());
-                    return imageNamespaceGroupIndexer.getByKey(KeyUtil.buildKey(binding.getImageNamespaceGroupRef()));
-                })
+    private List<V1alpha1ImageNamespaceGroup> resolveImageNamespaceGroupBindingsByProject(V1alpha1Project project) {
+        return imageNamespaceGroupBindingIndexer.byIndex(IndexNames.BY_PROJECT_NAME_TO_IMAGE_NAMESPACE_GROUP_BINDING_OBJECT, K8sObjectUtil.getName(project))
+                .stream().map(V1alpha1ImageNamespaceGroupBinding::getImageNamespaceGroupRef)
+                .filter(Objects::nonNull)
+                .map(KeyUtil::buildKey)
+                .map(imageNamespaceGroupIndexer::getByKey)
                 .filter(Objects::nonNull)
                 .distinct()
                 .toList();
@@ -560,6 +562,7 @@ public class Reconciliation {
 
     /**
      * 주어진 namespace에 속한 ImageNamespaceGroup들에 바인딩되어있는 Secret들을 반환함.
+     *
      * @param imageNamespaceGroups
      * @param namespace
      * @return
@@ -578,26 +581,18 @@ public class Reconciliation {
 
     /**
      * 주어진 namespace에 속한 NodeGroup들을 반환함.
+     *
      * @param namespace
      * @return
      */
     private List<V1alpha1NodeGroup> resolveNodeGroupByNamespace(String namespace) {
-        // todo 워크로드의 namespace -> project -> nodeGroupBinding -> nodeGroup
-        List<V1alpha1Project> projects = this.projectIndexer.byIndex(IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT, namespace);
-        List<V1alpha1NodeGroupBinding> nodeGroupBindings = resolveNodeGroupBindingsByProjects(projects);
-        List<V1alpha1NodeGroup> nodeGroups = resolveNodeGroupsByNodeGroupBindings(nodeGroupBindings);
-
-        return nodeGroups;
+        V1alpha1Project project = this.projectIndexer.getByKey(KeyUtil.buildKey(namespace));
+        List<V1alpha1NodeGroupBinding> nodeGroupBindings = resolveNodeGroupBindingsByProjects(project);
+        return resolveNodeGroupsByNodeGroupBindings(nodeGroupBindings);
     }
 
-    private List<V1alpha1NodeGroupBinding> resolveNodeGroupBindingsByProjects(List<V1alpha1Project> projects) {
-        return projects.stream()
-                .map(K8sObjectUtil::getName)
-                .flatMap(projectName -> this.nodeGroupBindingIndexer
-                        .byIndex(IndexNames.BY_PROJECT_NAME_TO_NODE_GROUP_BINDING_OBJECT, projectName)
-                        .stream())
-                .distinct()
-                .toList();
+    private List<V1alpha1NodeGroupBinding> resolveNodeGroupBindingsByProjects(V1alpha1Project project) {
+        return this.nodeGroupBindingIndexer.byIndex(IndexNames.BY_PROJECT_NAME_TO_NODE_GROUP_BINDING_OBJECT, K8sObjectUtil.getName(project));
     }
 
     private List<V1alpha1NodeGroup> resolveNodeGroupsByNodeGroupBindings(List<V1alpha1NodeGroupBinding> nodeGroupBindings) {

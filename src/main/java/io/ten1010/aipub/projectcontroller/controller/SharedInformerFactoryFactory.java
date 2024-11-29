@@ -9,7 +9,6 @@ import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBindi
 import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroupBinding;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
-import io.ten1010.groupcontroller.core.*;
 
 import java.util.List;
 import java.util.Map;
@@ -20,43 +19,39 @@ public class SharedInformerFactoryFactory {
 
     public static long RESYNC_PERIOD_IN_MILLIS = 30000;
 
-    private static Map<String, Function<V1Beta1ResourceGroup, List<String>>> byNodeNameToGroupObject() {
-        return Map.of(IndexNames.BY_NODE_NAME_TO_GROUP_OBJECT, ResourceGroupUtil::getNodes);
+    private static Map<String, Function<V1alpha1NodeGroup, List<String>>> byNodeNameToNodeGroupObject() {
+        return Map.of(IndexNames.BY_NODE_NAME_TO_NODE_GROUP_OBJECT, NodeGroupUtil::getNodes);
     }
 
-    private static Map<String, Function<V1Beta1ResourceGroup, List<String>>> byNamespaceNameToGroupObject() {
-        return Map.of(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, ResourceGroupUtil::getNamespaces);
+    private static Map<String, Function<V1alpha1NodeGroup, List<String>>> byNamespaceNameToNodeGroupObject() {
+        return Map.of(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, NodeGroupUtil::getNamespaces);
     }
 
-    private static Map<String, Function<V1Beta1ResourceGroup, List<String>>> byDaemonSetKeyToGroupObject() {
-        return Map.of(IndexNames.BY_DAEMON_SET_KEY_TO_GROUP_OBJECT, object -> ResourceGroupUtil.getDaemonSets(object).stream()
-                .map(KeyUtil::getKey)
-                .collect(Collectors.toList()));
+    private static Map<String, Function<V1alpha1NodeGroup, List<String>>> byDaemonSetKeyToNodeGroupObject() {
+        return Map.of(IndexNames.BY_DAEMON_SET_KEY_TO_NODE_GROUP_OBJECT,
+                object -> NodeGroupUtil.getDaemonSets(object).stream()
+                        .map(KeyUtil::getKey)
+                        .collect(Collectors.toList()));
     }
 
-    private static Map<String, Function<V1alpha1Project, List<String>>> byProjectNameToProjectObject() {
-        return Map.of(IndexNames.BY_PROJECT_NAME_TO_PROJECT_OBJECT,
+    private static Map<String, Function<V1alpha1NodeGroup, List<String>>> byAllowAllDaemonSetsPolicyToNodeGroupObject() {
+        return Map.of(IndexNames.BY_ALLOW_ALL_DAEMON_SET_POLICY_TO_NODE_GROUP_OBJECT,
+                object -> List.of(String.valueOf(NodeGroupUtil.isAllowAllDaemonSets(object))));
+    }
+
+    private static Map<String, Function<V1alpha1Project, List<String>>> byNamespaceNameToProjectObject() {
+        return Map.of(IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
+                object -> List.of(object.getNamespace()));
+    }
+
+    private static Map<String, Function<V1alpha1NodeGroupBinding, List<String>>> byNodeGroupNameToNodeGroupBindingObject() {
+        return Map.of(IndexNames.BY_NODE_GROUP_NAME_TO_NODE_GROUP_BINDING_OBJECT,
                 object -> List.of(K8sObjectUtil.getName(object)));
     }
 
-    private static Map<String, Function<V1alpha1NodeGroup, List<String>>> byNodeGroupNameToNodeGroupObject() {
-        return Map.of(IndexNames.BY_NODE_GROUP_NAME_TO_NODE_GROUP_OBJECT,
-                object -> List.of(K8sObjectUtil.getName(object)));
-    }
-
-    private static Map<String, Function<V1alpha1NodeGroupBinding, List<String>>> byNodeGroupBindingNameToNodeGroupBindingObject() {
-        return Map.of(IndexNames.BY_NODE_GROUP_BINDING_NAME_TO_NODE_GROUP_BINDING_OBJECT,
-                object -> List.of(K8sObjectUtil.getName(object)));
-    }
-
-    private static Map<String, Function<V1alpha1ImageNamespaceGroup, List<String>>> byImageNamespaceGroupNameToImageNamespaceGroupObject() {
-        return Map.of(IndexNames.BY_IMAGE_NAMESPACE_GROUP_NAME_TO_IMAGE_NAMESPACE_GROUP_OBJECT,
-                object -> List.of(K8sObjectUtil.getName(object)));
-    }
-
-    private static Map<String, Function<V1alpha1ImageNamespaceGroupBinding, List<String>>> byImageNamespaceGroupBindingNameToImageNamespaceGroupBindingObject() {
-        return Map.of(IndexNames.BY_IMAGE_NAMESPACE_GROUP_BINDING_NAME_TO_IMAGE_NAMESPACE_GROUP_BINDING_OBJECT,
-                object -> List.of(K8sObjectUtil.getName(object)));
+    private static Map<String, Function<V1alpha1ImageNamespaceGroupBinding, List<String>>> byProjectNameToImageNamespaceGroupBindingObject() {
+        return Map.of(IndexNames.BY_PROJECT_NAME_TO_IMAGE_NAMESPACE_GROUP_BINDING_OBJECT,
+                V1alpha1ImageNamespaceGroupBinding::getProjects);
     }
 
     private static Map<String, Function<V1CronJob, List<String>>> byNamespaceNameToCronJobObject() {
@@ -67,6 +62,11 @@ public class SharedInformerFactoryFactory {
     private static Map<String, Function<V1DaemonSet, List<String>>> byNamespaceNameToDaemonSetObject() {
         return Map.of(IndexNames.BY_NAMESPACE_NAME_TO_DAEMON_SET_OBJECT,
                 object -> List.of(K8sObjectUtil.getNamespace(object)));
+    }
+
+    private static Map<String, Function<V1DaemonSet, List<String>>> byDaemonSetNameToDaemonSetObject() {
+        return Map.of(IndexNames.BY_DAEMON_SET_NAME_TO_DAEMON_SET_OBJECT,
+                object -> List.of(K8sObjectUtil.getName(object)));
     }
 
     private static Map<String, Function<V1Deployment, List<String>>> byNamespaceNameToDeploymentObject() {
@@ -99,11 +99,6 @@ public class SharedInformerFactoryFactory {
                 object -> List.of(K8sObjectUtil.getNamespace(object)));
     }
 
-    private static Map<String, Function<V1Secret, List<String>>> byNamespaceNameToSecretObject() {
-        return Map.of(IndexNames.BY_NAMESPACE_NAME_TO_SECRET_OBJECT,
-                object -> List.of(K8sObjectUtil.getNamespace(object)));
-    }
-
     private K8sApis k8sApis;
 
     public SharedInformerFactoryFactory(K8sApis k8sApis) {
@@ -116,35 +111,29 @@ public class SharedInformerFactoryFactory {
                 this.k8sApis.getProjectApi(),
                 V1alpha1Project.class,
                 RESYNC_PERIOD_IN_MILLIS);
-        projectInformer.addIndexers(byProjectNameToProjectObject());
-        SharedIndexInformer<V1alpha1NodeGroup> nodeGroupInformer = informerFactory.sharedIndexInformerFor(
-                this.k8sApis.getNodeGroupApi(),
-                V1alpha1NodeGroup.class,
-                RESYNC_PERIOD_IN_MILLIS);
-        nodeGroupInformer.addIndexers(byNodeGroupNameToNodeGroupObject());
-        SharedIndexInformer<V1alpha1NodeGroupBinding> nodeGroupBindingInformer = informerFactory.sharedIndexInformerFor(
-                this.k8sApis.getNodeGroupBindingApi(),
-                V1alpha1NodeGroupBinding.class,
-                RESYNC_PERIOD_IN_MILLIS);
-        nodeGroupBindingInformer.addIndexers(byNodeGroupBindingNameToNodeGroupBindingObject());
-        SharedIndexInformer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupInformer = informerFactory.sharedIndexInformerFor(
-                this.k8sApis.getImageNamespaceGroupApi(),
-                V1alpha1ImageNamespaceGroup.class,
-                RESYNC_PERIOD_IN_MILLIS);
-        imageNamespaceGroupInformer.addIndexers(byImageNamespaceGroupNameToImageNamespaceGroupObject());
-        SharedIndexInformer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingInformer = informerFactory.sharedIndexInformerFor(
-                this.k8sApis.getImageNamespaceGroupBindingApi(),
-                V1alpha1ImageNamespaceGroupBinding.class,
-                RESYNC_PERIOD_IN_MILLIS);
-        imageNamespaceGroupBindingInformer.addIndexers(byImageNamespaceGroupBindingNameToImageNamespaceGroupBindingObject());
-
+        projectInformer.addIndexers(byNamespaceNameToProjectObject());
         SharedIndexInformer<V1alpha1NodeGroup> groupInformer = informerFactory.sharedIndexInformerFor(
                 this.k8sApis.getNodeGroupApi(),
                 V1alpha1NodeGroup.class,
                 RESYNC_PERIOD_IN_MILLIS);
-        groupInformer.addIndexers(byNodeNameToGroupObject());
-        groupInformer.addIndexers(byNamespaceNameToGroupObject());
-        groupInformer.addIndexers(byDaemonSetKeyToGroupObject());
+        groupInformer.addIndexers(byNodeNameToNodeGroupObject());
+        groupInformer.addIndexers(byNamespaceNameToNodeGroupObject());
+        groupInformer.addIndexers(byDaemonSetKeyToNodeGroupObject());
+        groupInformer.addIndexers(byAllowAllDaemonSetsPolicyToNodeGroupObject());
+        SharedIndexInformer<V1alpha1NodeGroupBinding> nodeGroupBindingInformer = informerFactory.sharedIndexInformerFor(
+                this.k8sApis.getNodeGroupBindingApi(),
+                V1alpha1NodeGroupBinding.class,
+                RESYNC_PERIOD_IN_MILLIS);
+        nodeGroupBindingInformer.addIndexers(byNodeGroupNameToNodeGroupBindingObject());
+        SharedIndexInformer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupInformer = informerFactory.sharedIndexInformerFor(
+                this.k8sApis.getImageNamespaceGroupApi(),
+                V1alpha1ImageNamespaceGroup.class,
+                RESYNC_PERIOD_IN_MILLIS);
+        SharedIndexInformer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingInformer = informerFactory.sharedIndexInformerFor(
+                this.k8sApis.getImageNamespaceGroupBindingApi(),
+                V1alpha1ImageNamespaceGroupBinding.class,
+                RESYNC_PERIOD_IN_MILLIS);
+        imageNamespaceGroupBindingInformer.addIndexers(byProjectNameToImageNamespaceGroupBindingObject());
 
         SharedIndexInformer<V1CronJob> cronJobInformer = informerFactory.sharedIndexInformerFor(
                 this.k8sApis.getCronJobApi(),
@@ -156,6 +145,7 @@ public class SharedInformerFactoryFactory {
                 V1DaemonSet.class,
                 RESYNC_PERIOD_IN_MILLIS);
         daemonSetInformer.addIndexers(byNamespaceNameToDaemonSetObject());
+        daemonSetInformer.addIndexers(byDaemonSetNameToDaemonSetObject());
         SharedIndexInformer<V1Deployment> deploymentInformer = informerFactory.sharedIndexInformerFor(
                 this.k8sApis.getDeploymentApi(),
                 V1Deployment.class,
@@ -186,11 +176,6 @@ public class SharedInformerFactoryFactory {
                 V1StatefulSet.class,
                 RESYNC_PERIOD_IN_MILLIS);
         statefulSetInformer.addIndexers(byNamespaceNameToStatefulSetObject());
-        SharedIndexInformer<V1Secret> secretInformer = informerFactory.sharedIndexInformerFor(
-                this.k8sApis.getSecretApi(),
-                V1Secret.class,
-                RESYNC_PERIOD_IN_MILLIS);
-        secretInformer.addIndexers(byNamespaceNameToSecretObject());
 
         SharedIndexInformer<V1Node> nodeInformer = informerFactory.sharedIndexInformerFor(
                 this.k8sApis.getNodeApi(),
@@ -211,6 +196,10 @@ public class SharedInformerFactoryFactory {
         SharedIndexInformer<V1ClusterRoleBinding> clusterRoleBindingInformer = informerFactory.sharedIndexInformerFor(
                 this.k8sApis.getClusterRoleBindingApi(),
                 V1ClusterRoleBinding.class,
+                RESYNC_PERIOD_IN_MILLIS);
+        SharedIndexInformer<V1Secret> secretInformer = informerFactory.sharedIndexInformerFor(
+                this.k8sApis.getSecretApi(),
+                V1Secret.class,
                 RESYNC_PERIOD_IN_MILLIS);
         SharedIndexInformer<V1Namespace> namespaceInformer = informerFactory.sharedIndexInformerFor(
                 this.k8sApis.getNamespaceApi(),

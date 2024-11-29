@@ -8,10 +8,15 @@ import io.kubernetes.client.extended.event.legacy.LegacyEventBroadcaster;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1EventSource;
+import io.kubernetes.client.openapi.models.V1Secret;
 import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import io.ten1010.aipub.projectcontroller.controller.SharedInformerFactoryFactory;
 import io.ten1010.aipub.projectcontroller.core.K8sApis;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBinding;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroupBinding;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,10 +55,31 @@ public class ControllerConfiguration {
 
     @Bean
     public Reconciliation reconciliation(SharedInformerFactory sharedInformerFactory) {
-        Indexer<V1Beta1ResourceGroup> groupIndexer = sharedInformerFactory
-                .getExistingSharedIndexInformer(V1Beta1ResourceGroup.class)
+        Indexer<V1alpha1Project> projectIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1Project.class)
                 .getIndexer();
-        return new Reconciliation(groupIndexer);
+        Indexer<V1alpha1NodeGroup> nodeGroupIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1NodeGroup.class)
+                .getIndexer();
+        Indexer<V1alpha1NodeGroupBinding> nodeGroupBindingIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1NodeGroupBinding.class)
+                .getIndexer();
+        Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1ImageNamespaceGroup.class)
+                .getIndexer();
+        Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1ImageNamespaceGroupBinding.class)
+                .getIndexer();
+        Indexer<V1Secret> secretIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1Secret.class)
+                .getIndexer();
+        return new Reconciliation(
+                projectIndexer,
+                nodeGroupIndexer,
+                nodeGroupBindingIndexer,
+                imageNamespaceGroupIndexer,
+                imageNamespaceGroupBindingIndexer,
+                secretIndexer);
     }
 
     @Bean(initMethod = "startRecording", destroyMethod = "shutdown")

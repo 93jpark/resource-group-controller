@@ -1,7 +1,7 @@
 package io.ten1010.aipub.projectcontroller.core;
 
 import io.kubernetes.client.common.KubernetesObject;
-import io.ten1010.groupcontroller.model.V1Beta1K8sObjectReference;
+import io.kubernetes.client.openapi.models.V1TypedObjectReference;
 
 import java.util.Objects;
 
@@ -24,7 +24,7 @@ public final class KeyUtil {
         return buildKey(object.getMetadata().getNamespace(), object.getMetadata().getName());
     }
 
-    public static String getKey(V1Beta1K8sObjectReference reference) {
+    public static String getKey(V1TypedObjectReference reference) {
         Objects.requireNonNull(reference.getName());
         if (reference.getNamespace() == null) {
             return buildKey(reference.getName());

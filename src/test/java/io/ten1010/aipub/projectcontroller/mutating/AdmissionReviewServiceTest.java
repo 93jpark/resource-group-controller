@@ -55,7 +55,7 @@ class AdmissionReviewServiceTest {
 
         Mockito.doReturn(List.of(group1))
                 .when(this.groupIndexer)
-                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, "ns1");
+                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, "ns1");
         AdmissionReviewService admissionReviewService = new AdmissionReviewService(this.reconciliation);
         V1AdmissionReviewRequest request = new V1AdmissionReviewRequest();
         request.setUid("dummy-uid");

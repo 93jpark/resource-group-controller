@@ -38,19 +38,35 @@ public class SecretControllerFactory {
         this.projectProperties = projectProperties;
     }
 
-    public Controller create() {
+    public Controller createRegistrySecretController() {
         return ControllerBuilder.defaultBuilder(this.sharedInformerFactory)
-                .withName("secret-controller")
+                .withName("registry-secret-controller")
                 .withWorkerCount(1)
                 .watch(workQueue -> new SecretWatch(workQueue, this.imageNamespaceGroupIndexer))
-                .watch(workQueue -> new ImageNamespaceGroupWatch(workQueue, this.secretIndexer, this.projectProperties.getSecretNamespace()))
+                .watch(workQueue -> new ImageNamespaceGroupWatch(workQueue, this.secretIndexer, this.projectProperties.getRegistrySecretNamespace()))
                 .watch(workQueue -> new ImageNamespaceGroupBindingWatch(workQueue, this.projectIndexer))
-                .withReconciler(new SecretReconciler(
+                .withReconciler(new RegistrySecretReconciler(
                         this.imageNamespaceGroupIndexer,
                         this.secretIndexer,
                         this.k8sApis.getCoreV1Api(),
                         this.registryRobotService,
-                        this.projectProperties.getSecretNamespace()
+                        this.projectProperties.getRegistrySecretNamespace()
+                ))
+                .build();
+    }
+
+    public Controller createProjectBindingSecretController() {
+        return ControllerBuilder.defaultBuilder(this.sharedInformerFactory)
+                .withName("project-binding-secret-controller")
+                .withWorkerCount(1)
+                .watch(workQueue -> new SecretWatch(workQueue, this.imageNamespaceGroupIndexer))
+                .watch(workQueue -> new ImageNamespaceGroupWatch(workQueue, this.secretIndexer, this.projectProperties.getRegistrySecretNamespace()))
+                .watch(workQueue -> new ImageNamespaceGroupBindingWatch(workQueue, this.projectIndexer))
+                .withReconciler(new ProjectBindingSecretReconciler(
+                        this.imageNamespaceGroupIndexer,
+                        this.secretIndexer,
+                        this.k8sApis.getCoreV1Api(),
+                        this.projectProperties.getRegistrySecretNamespace()
                 ))
                 .build();
     }

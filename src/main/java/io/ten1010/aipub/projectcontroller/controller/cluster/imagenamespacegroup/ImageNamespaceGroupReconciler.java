@@ -38,7 +38,7 @@ public class ImageNamespaceGroupReconciler implements Reconciler {
     private CoreV1Api coreV1Api;
     private RegistryRobotService registryRobotService;
     private RegistryRobotResolver robotResolver;
-    private String projectSecretNamespace;
+    private String registrySecretNamespace;
 
     public ImageNamespaceGroupReconciler(
             Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer,
@@ -46,7 +46,7 @@ public class ImageNamespaceGroupReconciler implements Reconciler {
             GenericKubernetesApi<V1alpha1ImageNamespaceGroup, V1alpha1ImageNamespaceGroupList> imageNamespaceGroupApi,
             CoreV1Api coreV1Api,
             RegistryRobotService registryRobotService,
-            String projectSecretNamespace) {
+            String registrySecretNamespace) {
         this.template = new KubernetesApiReconcileExceptionHandlingTemplate(API_CONFLICT_REQUEUE_DURATION, API_FAIL_REQUEUE_DURATION);
         this.imageNamespaceGroupIndexer = imageNamespaceGroupIndexer;
         this.secretIndexer = secretIndexer;
@@ -54,7 +54,7 @@ public class ImageNamespaceGroupReconciler implements Reconciler {
         this.coreV1Api = coreV1Api;
         this.registryRobotService = registryRobotService;
         this.robotResolver = new RegistryRobotResolver();
-        this.projectSecretNamespace = projectSecretNamespace;
+        this.registrySecretNamespace = registrySecretNamespace;
     }
 
     @Override
@@ -87,7 +87,7 @@ public class ImageNamespaceGroupReconciler implements Reconciler {
                                 this.registryRobotService.updateRobot(robot.getId(), robot);
                             }
                         }
-                        String secretKey = KeyUtil.buildKey(this.projectSecretNamespace, K8sObjectUtil.getName(imageNamespaceGroup));
+                        String secretKey = KeyUtil.buildKey(this.registrySecretNamespace, K8sObjectUtil.getName(imageNamespaceGroup));
                         Optional<V1Secret> secretOpt = Optional.ofNullable(this.secretIndexer.getByKey(secretKey));
                         if (secretOpt.isPresent()) {
                             V1Secret secret = secretOpt.get();

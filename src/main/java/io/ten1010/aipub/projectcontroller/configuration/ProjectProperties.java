@@ -15,6 +15,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ToString
 public class ProjectProperties {
 
-    private String secretNamespace;
+    private String registrySecretNamespace;
 
 }

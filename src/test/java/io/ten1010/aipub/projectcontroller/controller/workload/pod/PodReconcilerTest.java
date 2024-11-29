@@ -69,7 +69,7 @@ class PodReconcilerTest {
 
         Mockito.doReturn(List.of(group1))
                 .when(this.groupIndexer)
-                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, "ns1");
+                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, "ns1");
         Mockito.doReturn(pod1).when(this.podIndexer).getByKey(KeyUtil.buildKey("ns1", "pod1"));
         PodReconciler podReconciler = new PodReconciler(this.podIndexer, this.reconciliation, this.coreV1Api);
         podReconciler.reconcile(new Request("ns1", "pod1"));
@@ -128,7 +128,7 @@ class PodReconcilerTest {
 
         Mockito.doReturn(List.of(group1))
                 .when(this.groupIndexer)
-                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, "ns1");
+                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, "ns1");
         Mockito.doReturn(pod1).when(this.podIndexer).getByKey(KeyUtil.buildKey("ns1", "pod1"));
         PodReconciler podReconciler = new PodReconciler(this.podIndexer, this.reconciliation, this.coreV1Api);
         podReconciler.reconcile(new Request("ns1", "pod1"));
@@ -343,7 +343,7 @@ class PodReconcilerTest {
         pod1.setSpec(podSpec1);
         Mockito.doReturn(List.of(group1))
                 .when(this.groupIndexer)
-                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, "ns1");
+                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, "ns1");
         Mockito.doReturn(pod1).when(this.podIndexer).getByKey(KeyUtil.buildKey("ns1", "pod1"));
         PodReconciler podReconciler = new PodReconciler(this.podIndexer, this.reconciliation, this.coreV1Api);
         podReconciler.reconcile(new Request("ns1", "pod1"));
@@ -409,7 +409,7 @@ class PodReconcilerTest {
         pod1.setSpec(podSpec1);
         Mockito.doReturn(List.of(group1))
                 .when(this.groupIndexer)
-                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, "ns1");
+                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, "ns1");
         Mockito.doReturn(pod1).when(this.podIndexer).getByKey(KeyUtil.buildKey("ns1", "pod1"));
         PodReconciler podReconciler = new PodReconciler(this.podIndexer, this.reconciliation, this.coreV1Api);
         podReconciler.reconcile(new Request("ns1", "pod1"));
@@ -463,7 +463,7 @@ class PodReconcilerTest {
         pod1.setSpec(podSpec1);
         Mockito.doReturn(List.of(group1))
                 .when(this.groupIndexer)
-                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, "ns1");
+                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, "ns1");
         Mockito.doReturn(pod1).when(this.podIndexer).getByKey(KeyUtil.buildKey("ns1", "pod1"));
         PodReconciler podReconciler = new PodReconciler(this.podIndexer, this.reconciliation, this.coreV1Api);
         podReconciler.reconcile(new Request("ns1", "pod1"));
@@ -521,7 +521,7 @@ class PodReconcilerTest {
 
         Mockito.doReturn(List.of(group1))
                 .when(this.groupIndexer)
-                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, "ns1");
+                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, "ns1");
         Mockito.doReturn(pod1).when(this.podIndexer).getByKey(KeyUtil.buildKey("ns1", "pod1"));
         PodReconciler podReconciler = new PodReconciler(this.podIndexer, this.reconciliation, this.coreV1Api);
         podReconciler.reconcile(new Request("ns1", "pod1"));
@@ -546,7 +546,7 @@ class PodReconcilerTest {
 
         Mockito.doReturn(new ArrayList<>())
                 .when(this.groupIndexer)
-                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, "ns1");
+                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, "ns1");
         Mockito.doReturn(pod1).when(this.podIndexer).getByKey(KeyUtil.buildKey("ns1", "pod1"));
         PodReconciler podReconciler = new PodReconciler(this.podIndexer, this.reconciliation, this.coreV1Api);
         podReconciler.reconcile(new Request("ns1", "pod1"));

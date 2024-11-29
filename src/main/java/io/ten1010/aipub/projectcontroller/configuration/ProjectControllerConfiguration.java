@@ -1,6 +1,7 @@
 package io.ten1010.aipub.projectcontroller.configuration;
 
 import io.kubernetes.client.extended.controller.Controller;
+import io.kubernetes.client.extended.event.legacy.EventRecorder;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1DaemonSet;
@@ -33,16 +34,19 @@ public class ProjectControllerConfiguration {
     @Bean
     public Controller namespaceController(
             SharedInformerFactory sharedInformerFactory,
-            K8sApis k8sApis) {
+            K8sApis k8sApis,
+            EventRecorder eventRecorder,
+            ProjectProperties projectProperties) {
         Indexer<V1Namespace> namespaceIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1Namespace.class)
                 .getIndexer();
         Indexer<V1alpha1Project> projectIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1alpha1Project.class)
                 .getIndexer();
-        return new NamespaceControllerFactory(sharedInformerFactory, namespaceIndexer, projectIndexer, k8sApis).create();
+        return new NamespaceControllerFactory(sharedInformerFactory, namespaceIndexer, projectIndexer, k8sApis, eventRecorder, projectProperties)
+                .create();
     }
- 
+
     @Bean
     public Controller nodeGroupController(
             SharedInformerFactory sharedInformerFactory,
@@ -76,8 +80,7 @@ public class ProjectControllerConfiguration {
         Indexer<V1alpha1Project> projectIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1alpha1Project.class)
                 .getIndexer();
-
-        return new NodeGroupBindingControllerFactory(sharedInformerFactory, k8sApis)
+        return new NodeGroupBindingControllerFactory(sharedInformerFactory, nodeGroupIndexer, nodeGroupBindingIndexer, projectIndexer, k8sApis)
                 .create();
     }
 
@@ -114,7 +117,7 @@ public class ProjectControllerConfiguration {
     }
 
     @Bean
-    public Controller secretController(
+    public Controller registrySecretController(
             SharedInformerFactory sharedInformerFactory,
             K8sApis k8sApis,
             RegistryRobotService registryRobotService) {
@@ -128,7 +131,25 @@ public class ProjectControllerConfiguration {
                 .getExistingSharedIndexInformer(V1Secret.class)
                 .getIndexer();
         return new SecretControllerFactory(sharedInformerFactory, imageNamespaceGroupIndexer, projectIndexer, secretIndexer, k8sApis, registryRobotService, this.projectProperties)
-                .create();
+                .createRegistrySecretController();
+    }
+
+    @Bean
+    public Controller ProjectBindingSecretController(
+            SharedInformerFactory sharedInformerFactory,
+            K8sApis k8sApis,
+            RegistryRobotService registryRobotService) {
+        Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1ImageNamespaceGroup.class)
+                .getIndexer();
+        Indexer<V1alpha1Project> projectIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1Project.class)
+                .getIndexer();
+        Indexer<V1Secret> secretIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1Secret.class)
+                .getIndexer();
+        return new SecretControllerFactory(sharedInformerFactory, imageNamespaceGroupIndexer, projectIndexer, secretIndexer, k8sApis, registryRobotService, this.projectProperties)
+                .createProjectBindingSecretController();
     }
 
 }

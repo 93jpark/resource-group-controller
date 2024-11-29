@@ -46,7 +46,10 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
                     .map(projectName -> Optional.ofNullable(projectIndexer.getByKey(KeyUtil.buildKey(projectName))))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
-                    .map(project -> buildRequest(obj.getImageNamespaceGroupRef(), project.getNamespace()))
+                    .map(project -> buildRequest(
+                            Objects.requireNonNull(obj.getImageNamespaceGroupRef()),
+                            Objects.requireNonNull(project.getNamespace())
+                    ))
                     .forEach(queue::add);
         }
 
@@ -70,7 +73,10 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
                     .map(projectName -> Optional.ofNullable(this.projectIndexer.getByKey(KeyUtil.buildKey(projectName))))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
-                    .map(project -> buildRequest(obj.getImageNamespaceGroupRef(), project.getNamespace()))
+                    .map(project -> buildRequest(
+                            Objects.requireNonNull(obj.getImageNamespaceGroupRef()),
+                            Objects.requireNonNull(project.getNamespace())
+                    ))
                     .forEach(queue::add);
         }
 

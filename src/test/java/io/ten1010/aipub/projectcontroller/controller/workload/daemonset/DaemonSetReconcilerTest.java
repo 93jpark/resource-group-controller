@@ -82,7 +82,7 @@ class DaemonSetReconcilerTest {
 
         Mockito.doReturn(List.of(group1, group2))
                 .when(this.groupIndexer)
-                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_GROUP_OBJECT, "ns1");
+                .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, "ns1");
         Mockito.doReturn(ds1).when(this.daemonSetIndexer).getByKey(KeyUtil.buildKey("ns1", "ds1"));
         DaemonSetReconciler daemonSetReconciler = new DaemonSetReconciler(this.daemonSetIndexer, this.reconciliation, this.appsV1Api);
         daemonSetReconciler.reconcile(new Request("ns1", "ds1"));
