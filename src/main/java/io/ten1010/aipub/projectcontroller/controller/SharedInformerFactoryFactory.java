@@ -41,7 +41,10 @@ public class SharedInformerFactoryFactory {
 
     private static Map<String, Function<V1alpha1Project, List<String>>> byNamespaceNameToProjectObject() {
         return Map.of(IndexNames.BY_NAMESPACE_NAME_TO_PROJECT_OBJECT,
-                object -> List.of(object.getNamespace()));
+                object -> {
+                    String namespace = object.getNamespace();
+                    return namespace != null ? List.of(namespace) : List.of();
+                });
     }
 
     private static Map<String, Function<V1alpha1NodeGroupBinding, List<String>>> byNodeGroupNameToNodeGroupBindingObject() {

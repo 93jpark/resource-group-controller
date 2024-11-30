@@ -1,29 +1,25 @@
-package io.ten1010.aipub.projectcontroller.controller.cluster.imagenamespacegroup;
+package io.ten1010.aipub.projectcontroller.controller.cluster.registrysecret;
 
 import io.kubernetes.client.extended.controller.Controller;
 import io.kubernetes.client.extended.controller.builder.ControllerBuilder;
 import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
-import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Secret;
-import io.kubernetes.client.util.generic.GenericKubernetesApi;
 import io.ten1010.aipub.projectcontroller.configuration.ProjectProperties;
 import io.ten1010.aipub.projectcontroller.service.RegistryRobotService;
 import io.ten1010.aipub.projectcontroller.core.K8sApis;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
-import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupList;
 
-public class ImageNamespaceGroupControllerFactory {
+public class RegistrySecretControllerFactory {
 
     private SharedInformerFactory sharedInformerFactory;
     private Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer;
     private Indexer<V1Secret> secretIndexer;
-    private GenericKubernetesApi<V1alpha1ImageNamespaceGroup, V1alpha1ImageNamespaceGroupList> imageNamespaceGroupApi;
-    private CoreV1Api coreV1Api;
+    private K8sApis k8sApis;
     private RegistryRobotService registryRobotService;
     private ProjectProperties projectProperties;
 
-    public ImageNamespaceGroupControllerFactory(
+    public RegistrySecretControllerFactory(
             SharedInformerFactory sharedInformerFactory,
             Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer,
             Indexer<V1Secret> secretIndexer,
@@ -33,24 +29,23 @@ public class ImageNamespaceGroupControllerFactory {
         this.sharedInformerFactory = sharedInformerFactory;
         this.imageNamespaceGroupIndexer = imageNamespaceGroupIndexer;
         this.secretIndexer = secretIndexer;
-        this.imageNamespaceGroupApi = k8sApis.getImageNamespaceGroupApi();
-        this.coreV1Api = k8sApis.getCoreV1Api();
+        this.k8sApis = k8sApis;
         this.registryRobotService = registryRobotService;
         this.projectProperties = projectProperties;
     }
 
     public Controller create() {
         return ControllerBuilder.defaultBuilder(this.sharedInformerFactory)
-                .withName("image-namespace-group-controller")
+                .withName("registry-secret-controller")
                 .withWorkerCount(1)
                 .watch(workQueue -> new ImageNamespaceGroupWatch(workQueue, this.secretIndexer, this.projectProperties.getRegistrySecretNamespace()))
-                .withReconciler(new ImageNamespaceGroupReconciler(
+                .withReconciler(new RegistrySecretReconciler(
                         this.imageNamespaceGroupIndexer,
                         this.secretIndexer,
-                        this.imageNamespaceGroupApi,
-                        this.coreV1Api,
+                        this.k8sApis.getCoreV1Api(),
                         this.registryRobotService,
-                        this.projectProperties.getRegistrySecretNamespace()))
+                        this.projectProperties.getRegistrySecretNamespace()
+                ))
                 .build();
     }
 

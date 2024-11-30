@@ -1,5 +1,7 @@
 package io.ten1010.aipub.projectcontroller.controller.cluster.imagenamespacegroupbinding;
 
+import com.google.gson.JsonObject;
+import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.extended.controller.reconciler.Reconciler;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.controller.reconciler.Result;
@@ -7,6 +9,7 @@ import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.util.generic.GenericKubernetesApi;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
+import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBinding;
@@ -28,20 +31,17 @@ public class ImageNamespaceGroupBindingReconciler implements Reconciler {
     private Indexer<V1alpha1Project> projectIndexer;
     private Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer;
     private GenericKubernetesApi<V1alpha1ImageNamespaceGroupBinding, V1alpha1ImageNamespaceGroupBindingList> imageNamespaceGroupBindingApi;
-    private CoreV1Api coreV1Api;
 
     public ImageNamespaceGroupBindingReconciler(
             Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer,
             Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer,
             Indexer<V1alpha1Project> projectIndexer,
-            GenericKubernetesApi<V1alpha1ImageNamespaceGroupBinding, V1alpha1ImageNamespaceGroupBindingList> imageNamespaceGroupBindingApi,
-            CoreV1Api coreV1Api) {
+            GenericKubernetesApi<V1alpha1ImageNamespaceGroupBinding, V1alpha1ImageNamespaceGroupBindingList> imageNamespaceGroupBindingApi) {
         this.template = new KubernetesApiReconcileExceptionHandlingTemplate(API_CONFLICT_REQUEUE_DURATION, API_FAIL_REQUEUE_DURATION);
         this.imageNamespaceGroupIndexer = imageNamespaceGroupIndexer;
         this.imageNamespaceGroupBindingIndexer = imageNamespaceGroupBindingIndexer;
         this.projectIndexer = projectIndexer;
         this.imageNamespaceGroupBindingApi = imageNamespaceGroupBindingApi;
-        this.coreV1Api = coreV1Api;
     }
 
     @Override
@@ -51,34 +51,42 @@ public class ImageNamespaceGroupBindingReconciler implements Reconciler {
                     String imageNamespaceGroupBindingKey = KeyUtil.buildKey(request.getName());
                     Optional<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingOpt = Optional.ofNullable(this.imageNamespaceGroupBindingIndexer.getByKey(imageNamespaceGroupBindingKey));
                     if (imageNamespaceGroupBindingOpt.isEmpty()) {
-                        log.debug("ImageNamespaceGroupBinding [{}] not founded while reconciling", imageNamespaceGroupBindingKey);
+                        log.info("ImageNamespaceGroupBinding [{}] not founded while reconciling", imageNamespaceGroupBindingKey);
                         return new Result(false);
                     }
                     V1alpha1ImageNamespaceGroupBinding imageNamespaceGroupBinding = imageNamespaceGroupBindingOpt.get();
-                    log.debug("ImageNamespaceGroupBinding [{}] founded while reconciling", imageNamespaceGroupBindingKey);
+                    log.info("ImageNamespaceGroupBinding [{}] founded while reconciling {}", imageNamespaceGroupBindingKey, imageNamespaceGroupBinding);
 
-                    if (imageNamespaceGroupBinding.getImageNamespaceGroupRef() == null) {
-                        log.debug("ImageNamespaceGroupBinding [{}] has no ImageNamespaceGroupRef", imageNamespaceGroupBindingKey);
-                        return new Result(false);
-                    }
-
-                    String imageNamespaceGroupKey = KeyUtil.buildKey(imageNamespaceGroupBinding.getImageNamespaceGroupRef());
+                    String imageNamespaceGroupKey = KeyUtil.buildKey(K8sObjectUtil.getName(imageNamespaceGroupBinding));
                     Optional<V1alpha1ImageNamespaceGroup> imageNamespaceGroupOpt = Optional.ofNullable(this.imageNamespaceGroupIndexer.getByKey(imageNamespaceGroupKey));
                     if (imageNamespaceGroupOpt.isEmpty()) {
-                        log.debug("ImageNamespaceGroup [{}] not founded while reconciling", imageNamespaceGroupKey);
+                        log.info("ImageNamespaceGroup [{}] not founded while reconciling", imageNamespaceGroupKey);
                         return new Result(false);
                     }
+                    V1alpha1ImageNamespaceGroup imageNamespaceGroup = imageNamespaceGroupOpt.get();
 
-                    imageNamespaceGroupBinding.getProjects()
-                            .stream().map(KeyUtil::buildKey)
-                            .forEach(projectKey -> {
-                                Optional<V1alpha1Project> projectOpt = Optional.ofNullable(this.projectIndexer.getByKey(projectKey));
-                                if (projectOpt.isEmpty()) {
-                                    log.debug("Project [{}] not founded while reconciling", projectKey);
-                                }
-                            });
+                    if (imageNamespaceGroupBinding.getImageNamespaceGroupRef() == null ||
+                        !K8sObjectUtil.getName(imageNamespaceGroup).equals(imageNamespaceGroupBinding.getImageNamespaceGroupRef())) {
+                        updateImageNamespaceGroupBinding(imageNamespaceGroupBinding, K8sObjectUtil.getName(imageNamespaceGroup));
+                        log.info("Updated ImageNamespaceGroupBinding [{}] ref to [{}]", imageNamespaceGroupBindingKey, K8sObjectUtil.getName(imageNamespaceGroup));
+                        return new Result(false);
+                    }
                     return new Result(false);
                 }, request);
+    }
+
+    private void updateImageNamespaceGroupBinding(V1alpha1ImageNamespaceGroupBinding imageNamespaceGroupBinding, String imageNamespaceGroupRef) {
+        JsonObject patchBody = new JsonObject();
+        patchBody.add("spec", new JsonObject());
+        patchBody.getAsJsonObject("spec").addProperty("imageNamespaceGroupRef", imageNamespaceGroupRef);
+
+        V1Patch patch = new V1Patch(patchBody.toString());
+
+        this.imageNamespaceGroupBindingApi.patch(
+                K8sObjectUtil.getName(imageNamespaceGroupBinding),
+                V1Patch.PATCH_FORMAT_JSON_MERGE_PATCH,
+                patch
+        );
     }
 
 }

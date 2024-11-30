@@ -1,4 +1,4 @@
-package io.ten1010.aipub.projectcontroller.controller.cluster.secret;
+package io.ten1010.aipub.projectcontroller.controller.cluster.registrysecret;
 
 import io.kubernetes.client.extended.controller.reconciler.Reconciler;
 import io.kubernetes.client.extended.controller.reconciler.Request;
@@ -59,6 +59,14 @@ public class RegistrySecretReconciler implements Reconciler {
                     String imageNamespaceGroupKey = KeyUtil.buildKey(request.getName());
                     Optional<V1alpha1ImageNamespaceGroup> imageNamespaceGroupOpt = Optional.ofNullable(this.imageNamespaceGroupIndexer.getByKey(imageNamespaceGroupKey));
                     if (imageNamespaceGroupOpt.isEmpty()) {
+                        log.info("ImageNamespaceGroup [{}] not founded while reconciling", imageNamespaceGroupKey);
+                        String registrySecretKey = KeyUtil.buildKey(this.registrySecretNamespace, request.getName());
+                        Optional<V1Secret> registrySecretOpt = Optional.ofNullable(secretIndexer.getByKey(registrySecretKey));
+                        if (registrySecretOpt.isPresent()) {
+                            V1Secret registrySecret = registrySecretOpt.get();
+                            deleteSecret(K8sObjectUtil.getName(registrySecret), K8sObjectUtil.getNamespace(registrySecret));
+                            log.info("Deleted secreted [{}] which ImageNamespaceGroup not exists", registrySecretKey);
+                        }
                         return new Result(false);
                     }
                     V1alpha1ImageNamespaceGroup imageNamespaceGroup = imageNamespaceGroupOpt.get();
@@ -67,19 +75,19 @@ public class RegistrySecretReconciler implements Reconciler {
                     String robotUsername = this.robotResolver.resolveRobotUsername(K8sObjectUtil.getName(imageNamespaceGroup));
                     Optional<RegistryRobot> robotOpt = registryRobotService.findByUsername(robotUsername);
                     if (robotOpt.isEmpty()) {
-                        log.debug("RegistryRobot [{}] not founded while reconciling", K8sObjectUtil.getName(imageNamespaceGroup));
+                        log.info("RegistryRobot [{}] not founded while reconciling", robotUsername);
                         String registrySecretKey = KeyUtil.buildKey(this.registrySecretNamespace, request.getName());
                         Optional<V1Secret> registrySecretOpt = Optional.ofNullable(secretIndexer.getByKey(registrySecretKey));
                         if (registrySecretOpt.isPresent()) {
                             V1Secret registrySecret = registrySecretOpt.get();
                             deleteSecret(K8sObjectUtil.getName(registrySecret), K8sObjectUtil.getNamespace(registrySecret));
-                            log.debug("Deleted secreted [{}] which exists before creating RegistryRobot while reconciling", registrySecretKey);
+                            log.info("Deleted secreted [{}] which exists before creating RegistryRobot while reconciling", registrySecretKey);
                         }
-                        RegistryRobot robot = RegistryRobotFactory.create(K8sObjectUtil.getName(imageNamespaceGroup), imageNamespaceGroup.getAipubImageNamespaces());
+                        RegistryRobot robot = RegistryRobotFactory.create(robotUsername, imageNamespaceGroup.getAipubImageNamespaces());
+                        log.info("Created Robot [{}] while reconciling for ImageNamespaceGroup [{}]", robotUsername, imageNamespaceGroupKey);
                         String robotSecret = registryRobotService.createRobot(robot);
-                        log.debug("Created Robot [{}] while reconciling", robotUsername);
-                        createSecret(K8sObjectUtil.getName(imageNamespaceGroup), this.registrySecretNamespace, robotSecret);
-                        log.debug("Created Secret [{}] for ImageNamespaceGroup[{}] while reconciling", registrySecretKey, imageNamespaceGroupKey);
+                        createSecret(K8sObjectUtil.getName(imageNamespaceGroup), this.registrySecretNamespace, robotUsername, robotSecret);
+                        log.info("Created Secret [{}] for ImageNamespaceGroup[{}] while reconciling", registrySecretKey, imageNamespaceGroupKey);
                         return new Result(false);
                     }
                     String registrySecretKey = KeyUtil.buildKey(this.registrySecretNamespace, request.getName());
@@ -88,16 +96,16 @@ public class RegistrySecretReconciler implements Reconciler {
                         V1Secret registrySecret = registrySecretOpt.get();
                         if (!ImagePullSecretUtil.hasPullSecretData(registrySecret)) {
                             deleteSecret(K8sObjectUtil.getName(registrySecret), K8sObjectUtil.getNamespace(registrySecret));
-                            log.debug("Deleted Secret [{}] which doesn't have imagePullSecret while reconciling", registrySecretKey);
+                            log.info("Deleted Secret [{}] which doesn't have imagePullSecret data while reconciling", registrySecretKey);
                             String newRobotSecret = recreateRegistryRobot(robotOpt.get(), imageNamespaceGroup);
-                            createSecret(K8sObjectUtil.getName(imageNamespaceGroup), this.registrySecretNamespace, newRobotSecret);
-                            log.debug("Created Secret [{}] for ImageNamespaceGroup[{}] while reconciling", registrySecretKey, imageNamespaceGroupKey);
+                            createSecret(K8sObjectUtil.getName(imageNamespaceGroup), this.registrySecretNamespace, robotUsername, newRobotSecret);
+                            log.info("Created Secret [{}] for ImageNamespaceGroup[{}] while reconciling", registrySecretKey, imageNamespaceGroupKey);
                             return new Result(false);
                         }
                     }
                     String newRobotSecret = recreateRegistryRobot(robotOpt.get(), imageNamespaceGroup);
-                    createSecret(K8sObjectUtil.getName(imageNamespaceGroup), this.registrySecretNamespace, newRobotSecret);
-                    log.debug("Created Secret [{}] for ImageNamespaceGroup[{}] while reconciling", registrySecretKey, imageNamespaceGroupKey);
+                    createSecret(K8sObjectUtil.getName(imageNamespaceGroup), this.registrySecretNamespace, robotUsername, newRobotSecret);
+                    log.info("Created Secret [{}] for ImageNamespaceGroup[{}] while reconciling", registrySecretKey, imageNamespaceGroupKey);
                     return new Result(false);
                 },
                 request);
@@ -106,18 +114,19 @@ public class RegistrySecretReconciler implements Reconciler {
     private String recreateRegistryRobot(RegistryRobot existingRobot, V1alpha1ImageNamespaceGroup imageNamespaceGroup) {
         Objects.requireNonNull(existingRobot.getId(), "robot id must not be null");
         registryRobotService.deleteRobot(existingRobot.getId());
-        RegistryRobot newRobot = RegistryRobotFactory.create(K8sObjectUtil.getName(imageNamespaceGroup), imageNamespaceGroup.getAipubImageNamespaces());
+        String robotUsername = robotResolver.resolveRobotUsername(K8sObjectUtil.getName(imageNamespaceGroup));
+        RegistryRobot newRobot = RegistryRobotFactory.create(robotUsername, imageNamespaceGroup.getAipubImageNamespaces());
         return registryRobotService.createRobot(newRobot);
     }
 
-    private void createSecret(String name, String namespace, String secretValue) throws ApiException {
+    private void createSecret(String name, String namespace, String robotUsername, String secretValue) throws ApiException {
         V1Secret secret = new V1Secret();
         V1ObjectMeta objectMeta = new V1ObjectMeta();
         objectMeta.setName(name);
         objectMeta.setNamespace(namespace);
         secret.setMetadata(objectMeta);
-        secret.setKind("kubernetes.io/dockerconfigjson");
-        ImagePullSecretUtil.applyNewSecretValue(secret, secretValue);
+        secret.setType("kubernetes.io/dockerconfigjson");
+        ImagePullSecretUtil.applyNewPullSecretValue(secret, robotUsername, secretValue);
         this.coreV1Api.createNamespacedSecret(namespace, secret)
                 .execute();
     }

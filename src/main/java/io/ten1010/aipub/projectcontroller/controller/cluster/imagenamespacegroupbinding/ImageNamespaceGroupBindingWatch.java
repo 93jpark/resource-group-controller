@@ -5,6 +5,7 @@ import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.ResourceEventHandler;
 import io.ten1010.aipub.projectcontroller.controller.EventHandlerUtil;
+import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBinding;
 
 import java.time.Duration;
@@ -28,12 +29,15 @@ public class ImageNamespaceGroupBindingWatch implements ControllerWatch<V1alpha1
 
         @Override
         public void onUpdate(V1alpha1ImageNamespaceGroupBinding oldObj, V1alpha1ImageNamespaceGroupBinding newObj) {
-            this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(newObj));
+            if (!K8sObjectUtil.getName(oldObj).equals(K8sObjectUtil.getName(newObj))) {
+                this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(oldObj));
+                this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(newObj));
+                return;
+            }
         }
 
         @Override
         public void onDelete(V1alpha1ImageNamespaceGroupBinding obj, boolean deletedFinalStateUnknown) {
-            this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(obj));
         }
 
     }

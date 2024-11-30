@@ -186,7 +186,8 @@ public class K8sApis {
                 V1SecretList.class,
                 "",
                 "v1",
-                "secrets");
+                "secrets",
+                apiClient);
     }
 
 }

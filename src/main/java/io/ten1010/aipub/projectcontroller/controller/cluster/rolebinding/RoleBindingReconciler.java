@@ -10,7 +10,8 @@ import io.kubernetes.client.openapi.models.*;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
 import io.ten1010.aipub.projectcontroller.controller.cluster.role.ResourceGroupRoleName;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroup;
+import io.ten1010.aipub.projectcontroller.core.NodeGroupUtil;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
@@ -37,22 +38,22 @@ public class RoleBindingReconciler implements Reconciler {
         return Optional.ofNullable(roleBinding.getRoleRef());
     }
 
-    private static List<V1Subject> getSubjects(V1RoleBinding roleBinding) {
+    private static List<RbacV1Subject> getSubjects(V1RoleBinding roleBinding) {
         return roleBinding.getSubjects() == null ? new ArrayList<>() : roleBinding.getSubjects();
     }
 
     private static V1OwnerReference buildOwnerReference(String groupName, String groupUid) {
         V1OwnerReferenceBuilder builder = new V1OwnerReferenceBuilder();
-        return builder.withApiVersion(V1Beta1ResourceGroup.API_VERSION)
+        return builder.withApiVersion("project.aipub/ten1010.io/v1alpha1")
                 .withBlockOwnerDeletion(true)
                 .withController(true)
-                .withKind(V1Beta1ResourceGroup.KIND)
+                .withKind("nodegroup")
                 .withName(groupName)
                 .withUid(groupUid)
                 .build();
     }
 
-    private static V1OwnerReference buildOwnerReference(V1Beta1ResourceGroup group) {
+    private static V1OwnerReference buildOwnerReference(V1alpha1NodeGroup group) {
         Objects.requireNonNull(group.getMetadata());
         Objects.requireNonNull(group.getMetadata().getName());
         Objects.requireNonNull(group.getMetadata().getUid());
@@ -61,14 +62,14 @@ public class RoleBindingReconciler implements Reconciler {
 
     private KubernetesApiReconcileExceptionHandlingTemplate template;
     private Indexer<V1Namespace> namespaceIndexer;
-    private Indexer<V1Beta1ResourceGroup> groupIndexer;
+    private Indexer<V1alpha1NodeGroup> groupIndexer;
     private Indexer<V1RoleBinding> roleBindingIndexer;
     private Indexer<V1Role> roleIndexer;
     private RbacAuthorizationV1Api rbacAuthorizationV1Api;
 
     public RoleBindingReconciler(
             Indexer<V1Namespace> namespaceIndexer,
-            Indexer<V1Beta1ResourceGroup> groupIndexer,
+            Indexer<V1alpha1NodeGroup> groupIndexer,
             Indexer<V1RoleBinding> roleBindingIndexer,
             Indexer<V1Role> roleIndexer,
             RbacAuthorizationV1Api rbacAuthorizationV1Api) {
@@ -92,20 +93,22 @@ public class RoleBindingReconciler implements Reconciler {
                         return new Result(false);
                     }
                     String groupName = ResourceGroupRoleBindingName.fromRoleBindingName(request.getName()).getResourceGroupName();
-                    V1Beta1ResourceGroup group = this.groupIndexer.getByKey(groupName);
+                    V1alpha1NodeGroup group = this.groupIndexer.getByKey(groupName);
                     if (group == null) {
                         deleteRoleBindingIfExist(request.getNamespace(), request.getName());
                         return new Result(false);
                     }
-                    Objects.requireNonNull(group.getSpec());
-                    List<String> namespacesInGroup = group.getSpec().getNamespaces();
+//                    Objects.requireNonNull(group.getSpec());
+//                    List<String> namespacesInGroup = group.getSpec().getNamespaces();
+                    List<String> namespacesInGroup = NodeGroupUtil.getNamespaces(group);
                     if (!namespacesInGroup.contains(request.getNamespace())) {
                         deleteRoleBindingIfExist(request.getNamespace(), request.getName());
                         return new Result(false);
                     }
                     String roleName = new ResourceGroupRoleName(groupName).getName();
                     V1RoleRef roleRef = buildRoleRef(roleName);
-                    List<V1Subject> subjects = group.getSpec().getSubjects();
+//                    List<RbacV1Subject> subjects = group.getSpec().getSubjects();
+                    List<RbacV1Subject> subjects = new ArrayList<>();
                     V1RoleBinding roleBinding = this.roleBindingIndexer.getByKey(KeyUtil.buildKey(request.getNamespace(), request.getName()));
                     if (roleBinding == null) {
                         String roleKey = KeyUtil.buildKey(request.getNamespace(), roleRef.getName());
@@ -127,7 +130,7 @@ public class RoleBindingReconciler implements Reconciler {
                 request);
     }
 
-    private void createRoleBinding(String namespace, String name, V1RoleRef roleRef, List<V1Subject> subjects, V1OwnerReference ownerReference) throws ApiException {
+    private void createRoleBinding(String namespace, String name, V1RoleRef roleRef, List<RbacV1Subject> subjects, V1OwnerReference ownerReference) throws ApiException {
         V1RoleBindingBuilder builder = new V1RoleBindingBuilder();
         V1RoleBinding roleBinding = builder.withNewMetadata()
                 .withNamespace(namespace)
@@ -137,10 +140,10 @@ public class RoleBindingReconciler implements Reconciler {
                 .withRoleRef(roleRef)
                 .withSubjects(subjects)
                 .build();
-        this.rbacAuthorizationV1Api.createNamespacedRoleBinding(namespace, roleBinding, null, null, null, null);
+        this.rbacAuthorizationV1Api.createNamespacedRoleBinding(namespace, roleBinding).execute();
     }
 
-    private void updateRoleBinding(V1RoleBinding target, V1RoleRef roleRef, List<V1Subject> subjects) throws ApiException {
+    private void updateRoleBinding(V1RoleBinding target, V1RoleRef roleRef, List<RbacV1Subject> subjects) throws ApiException {
         V1RoleBindingBuilder builder = new V1RoleBindingBuilder(target);
         V1RoleBinding updated = builder
                 .withRoleRef(roleRef)
@@ -150,19 +153,12 @@ public class RoleBindingReconciler implements Reconciler {
         Objects.requireNonNull(meta);
         Objects.requireNonNull(meta.getNamespace());
         Objects.requireNonNull(meta.getName());
-        this.rbacAuthorizationV1Api.replaceNamespacedRoleBinding(meta.getName(), meta.getNamespace(), updated, null, null, null, null);
+        this.rbacAuthorizationV1Api.replaceNamespacedRoleBinding(meta.getName(), meta.getNamespace(), updated).execute();
     }
 
     private void deleteRoleBinding(String namespace, String name) throws ApiException {
-        this.rbacAuthorizationV1Api.deleteNamespacedRoleBinding(
-                name,
-                namespace,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        this.rbacAuthorizationV1Api.deleteNamespacedRoleBinding(name, namespace)
+                .execute();
     }
 
     private void deleteRoleBindingIfExist(String namespace, String name) throws ApiException {

@@ -3,9 +3,9 @@ kind: ClusterRole
 metadata:
   name: resource-group-controller.resource-group.ten1010.io
 rules:
-  - apiGroups: [ "resource-group.ten1010.io" ]
-    resources: [ "resourcegroups" ]
-    verbs: [ "get", "watch", "list" ]
+  - apiGroups: ["project.aipub.ten1010.io"]
+    resources: ["projects", "nodegroups", "nodegroupbindings", "imagenamespacegroups", "imagenamespacegroupbindings"]
+    verbs: ["get", "watch", "list", "update", "patch", "delete"]
   - apiGroups: [ "" ]
     resources: [ "pods", "replicationcontrollers" ]
     verbs: [ "get", "watch", "list", "update", "delete" ]
@@ -32,7 +32,7 @@ rules:
     verbs: [ "create", "get", "watch", "list", "update", "delete" ]
   - apiGroups: [ "" ]
     resources: [ "namespaces" ]
-    verbs: [ "get", "watch", "list" ]
+    verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 
   ### Needed to reconcile resource group role ###
   - apiGroups: [ "" ]
@@ -53,9 +53,6 @@ rules:
   - apiGroups: [ "policy" ]
     resources: [ "poddisruptionbudgets" ]
     verbs: [ "*" ]
-  - apiGroups: [ "ten1010.io" ]
-    resources: [ "resourcegroups" ]
-    verbs: [ "get" ]
   - apiGroups: [ "" ]
     resources: [ "nodes" ]
     verbs: [ "get" ]

@@ -56,6 +56,6 @@ public class NodeGroupBindingWatch implements ControllerWatch<V1alpha1NodeGroupB
 
     @Override
     public Duration getResyncPeriod() {
-        return null;
+        return RESYNC_PERIOD;
     }
 }

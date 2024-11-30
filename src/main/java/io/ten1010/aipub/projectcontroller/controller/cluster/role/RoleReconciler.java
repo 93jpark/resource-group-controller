@@ -9,7 +9,8 @@ import io.kubernetes.client.openapi.apis.RbacAuthorizationV1Api;
 import io.kubernetes.client.openapi.models.*;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroup;
+import io.ten1010.aipub.projectcontroller.core.NodeGroupUtil;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
@@ -73,16 +74,16 @@ public class RoleReconciler implements Reconciler {
 
     private static V1OwnerReference buildOwnerReference(String groupName, String groupUid) {
         V1OwnerReferenceBuilder builder = new V1OwnerReferenceBuilder();
-        return builder.withApiVersion(V1Beta1ResourceGroup.API_VERSION)
+        return builder.withApiVersion("project.aipub.ten1010.io")
                 .withBlockOwnerDeletion(true)
                 .withController(true)
-                .withKind(V1Beta1ResourceGroup.KIND)
+                .withKind("nodegroup")
                 .withName(groupName)
                 .withUid(groupUid)
                 .build();
     }
 
-    private static V1OwnerReference buildOwnerReference(V1Beta1ResourceGroup group) {
+    private static V1OwnerReference buildOwnerReference(V1alpha1NodeGroup group) {
         Objects.requireNonNull(group.getMetadata());
         Objects.requireNonNull(group.getMetadata().getName());
         Objects.requireNonNull(group.getMetadata().getUid());
@@ -91,13 +92,13 @@ public class RoleReconciler implements Reconciler {
 
     private KubernetesApiReconcileExceptionHandlingTemplate template;
     private Indexer<V1Namespace> namespaceIndexer;
-    private Indexer<V1Beta1ResourceGroup> groupIndexer;
+    private Indexer<V1alpha1NodeGroup> groupIndexer;
     private Indexer<V1Role> roleIndexer;
     private RbacAuthorizationV1Api rbacAuthorizationV1Api;
 
     public RoleReconciler(
             Indexer<V1Namespace> namespaceIndexer,
-            Indexer<V1Beta1ResourceGroup> groupIndexer,
+            Indexer<V1alpha1NodeGroup> groupIndexer,
             Indexer<V1Role> roleIndexer,
             RbacAuthorizationV1Api rbacAuthorizationV1Api) {
         this.template = new KubernetesApiReconcileExceptionHandlingTemplate(API_CONFLICT_REQUEUE_DURATION, API_FAIL_REQUEUE_DURATION);
@@ -108,7 +109,7 @@ public class RoleReconciler implements Reconciler {
     }
 
     /**
-     * Reconcile given role based on {@link Request} to ensure its namespace and its policy compared with {@link V1Beta1ResourceGroup}.
+     * Reconcile given role based on {@link Request} to ensure its namespace and its policy compared with {@link V1alpha1NodeGroup}.
      *
      * @param request the reconcile request which triggered by watch events
      * @return the result
@@ -125,13 +126,12 @@ public class RoleReconciler implements Reconciler {
                         return new Result(false);
                     }
                     String groupName = ResourceGroupRoleName.fromRoleName(request.getName()).getResourceGroupName();
-                    V1Beta1ResourceGroup group = this.groupIndexer.getByKey(groupName);
+                    V1alpha1NodeGroup group = this.groupIndexer.getByKey(groupName);
                     if (group == null) {
                         deleteRoleIfExist(request.getNamespace(), request.getName());
                         return new Result(false);
                     }
-                    Objects.requireNonNull(group.getSpec());
-                    List<String> namespacesInGroup = group.getSpec().getNamespaces();
+                    List<String> namespacesInGroup = NodeGroupUtil.getNamespaces(group);
                     String roleKey = KeyUtil.buildKey(request.getNamespace(), request.getName());
                     if (!namespacesInGroup.contains(request.getNamespace())) {
                         deleteRoleIfExist(request.getNamespace(), request.getName());
@@ -161,7 +161,7 @@ public class RoleReconciler implements Reconciler {
                 .endMetadata()
                 .withRules(rules)
                 .build();
-        this.rbacAuthorizationV1Api.createNamespacedRole(namespace, role, null, null, null, null);
+        this.rbacAuthorizationV1Api.createNamespacedRole(namespace, role).execute();
     }
 
     private void updateRole(V1Role target, List<V1PolicyRule> rules) throws ApiException {
@@ -172,11 +172,11 @@ public class RoleReconciler implements Reconciler {
         Objects.requireNonNull(meta);
         Objects.requireNonNull(meta.getNamespace());
         Objects.requireNonNull(meta.getName());
-        this.rbacAuthorizationV1Api.replaceNamespacedRole(meta.getName(), meta.getNamespace(), updated, null, null, null, null);
+        this.rbacAuthorizationV1Api.replaceNamespacedRole(meta.getName(), meta.getNamespace(), updated).execute();
     }
 
     private void deleteRole(String namespace, String name) throws ApiException {
-        this.rbacAuthorizationV1Api.deleteNamespacedRole(name, namespace, null, null, null, null, null, null);
+        this.rbacAuthorizationV1Api.deleteNamespacedRole(name, namespace).execute();
     }
 
     private void deleteRoleIfExist(String namespace, String name) throws ApiException {

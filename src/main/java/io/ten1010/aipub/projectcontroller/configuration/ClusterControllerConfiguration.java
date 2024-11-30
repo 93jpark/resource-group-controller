@@ -43,8 +43,8 @@ public class ClusterControllerConfiguration {
         Indexer<V1Namespace> namespaceIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1Namespace.class)
                 .getIndexer();
-        Indexer<V1Beta1ResourceGroup> groupIndexer = sharedInformerFactory
-                .getExistingSharedIndexInformer(V1Beta1ResourceGroup.class)
+        Indexer<V1alpha1NodeGroup> groupIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1NodeGroup.class)
                 .getIndexer();
         return new RoleControllerFactory(
                 sharedInformerFactory,
@@ -67,8 +67,8 @@ public class ClusterControllerConfiguration {
         Indexer<V1Namespace> namespaceIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1Namespace.class)
                 .getIndexer();
-        Indexer<V1Beta1ResourceGroup> groupIndexer = sharedInformerFactory
-                .getExistingSharedIndexInformer(V1Beta1ResourceGroup.class)
+        Indexer<V1alpha1NodeGroup> groupIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1NodeGroup.class)
                 .getIndexer();
         return new RoleBindingControllerFactory(
                 sharedInformerFactory,
@@ -86,8 +86,8 @@ public class ClusterControllerConfiguration {
         Indexer<V1ClusterRole> clusterRoleIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1ClusterRole.class)
                 .getIndexer();
-        Indexer<V1Beta1ResourceGroup> groupIndexer = sharedInformerFactory
-                .getExistingSharedIndexInformer(V1Beta1ResourceGroup.class)
+        Indexer<V1alpha1NodeGroup> groupIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1NodeGroup.class)
                 .getIndexer();
         return new ClusterRoleControllerFactory(
                 sharedInformerFactory,
@@ -106,8 +106,8 @@ public class ClusterControllerConfiguration {
         Indexer<V1ClusterRole> clusterRoleIndexer = sharedInformerFactory
                 .getExistingSharedIndexInformer(V1ClusterRole.class)
                 .getIndexer();
-        Indexer<V1Beta1ResourceGroup> groupIndexer = sharedInformerFactory
-                .getExistingSharedIndexInformer(V1Beta1ResourceGroup.class)
+        Indexer<V1alpha1NodeGroup> groupIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1NodeGroup.class)
                 .getIndexer();
         return new ClusterRoleBindingControllerFactory(
                 sharedInformerFactory,

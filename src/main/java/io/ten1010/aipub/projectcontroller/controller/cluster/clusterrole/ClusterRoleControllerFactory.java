@@ -6,18 +6,18 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.models.V1ClusterRole;
 import io.ten1010.aipub.projectcontroller.core.K8sApis;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
 
 public class ClusterRoleControllerFactory {
 
     private SharedInformerFactory informerFactory;
-    private Indexer<V1Beta1ResourceGroup> groupIndexer;
+    private Indexer<V1alpha1NodeGroup> groupIndexer;
     private Indexer<V1ClusterRole> clusterRoleIndexer;
     private K8sApis k8sApis;
 
     public ClusterRoleControllerFactory(
             SharedInformerFactory informerFactory,
-            Indexer<V1Beta1ResourceGroup> groupIndexer,
+            Indexer<V1alpha1NodeGroup> groupIndexer,
             Indexer<V1ClusterRole> clusterRoleIndexer,
             K8sApis k8sApis) {
         this.informerFactory = informerFactory;

@@ -57,33 +57,7 @@ public class NodeGroupReconciler implements Reconciler {
                     }
                     V1alpha1NodeGroup nodeGroup = nodeGroupOpt.get();
                     log.debug("NodeGroup [{}] founded while reconciling\n{}", nodeGroupKey, nodeGroup);
-                    NodeGroupPolicy nodeGroupPolicy = NodeGroupPolicy.from(nodeGroup);
-                    if (!nodeGroupPolicy.isAllowAllDaemonSets()) {
-                        boolean daemonSetNotExists = nodeGroupPolicy.getAllowedDaemonSetKeys().stream()
-                                .anyMatch(daemonSetKey -> {
-                                    Optional<V1DaemonSet> daemonSetOpt = Optional.ofNullable(this.daemonSetIndexer.getByKey(daemonSetKey));
-                                    if (daemonSetOpt.isEmpty()) {
-                                        log.debug("DaemonSet [{}] not founded while reconciling", daemonSetKey);
-                                        return true;
-                                    }
-                                    return false;
-                                });
-                        if (daemonSetNotExists) {
-                            return new Result(false);
-                        }
-                    }
-                    boolean namespaceNotExists = nodeGroupPolicy.getAllowedDaemonSetNamespaces().stream()
-                            .anyMatch(namespace -> {
-                                Optional<V1Namespace> namespaceOpt = Optional.ofNullable(this.namespaceIndexer.getByKey(namespace));
-                                if (namespaceOpt.isEmpty()) {
-                                    log.debug("Namespace [{}] not founded while reconciling", namespace);
-                                    return true;
-                                }
-                                return false;
-                            });
-                    if (namespaceNotExists) {
-                        return new Result(false);
-                    }
+
                     return new Result(false);
                 }, request);
     }

@@ -8,8 +8,7 @@ import io.kubernetes.client.openapi.models.V1ClusterRole;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroup;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroupSpec;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +17,7 @@ import org.mockito.Mockito;
 class ClusterRoleReconcilerTest {
 
     Indexer<V1Namespace> namespaceIndexer;
-    Indexer<V1Beta1ResourceGroup> groupIndexer;
+    Indexer<V1alpha1NodeGroup> groupIndexer;
     Indexer<V1ClusterRole> clusterRoleIndexer;
     RbacAuthorizationV1Api rbacAuthorizationV1Api;
 
@@ -32,13 +31,11 @@ class ClusterRoleReconcilerTest {
 
     @Test
     void should_create_the_cluster_role() {
-        V1Beta1ResourceGroup group1 = new V1Beta1ResourceGroup();
+        V1alpha1NodeGroup group1 = new V1alpha1NodeGroup();
         V1ObjectMeta meta1 = new V1ObjectMeta();
         meta1.setName("group1");
         meta1.setUid("group1-uid");
         group1.setMetadata(meta1);
-        V1Beta1ResourceGroupSpec spec1 = new V1Beta1ResourceGroupSpec();
-        group1.setSpec(spec1);
 
         Mockito.doReturn(group1).when(this.groupIndexer).getByKey("group1");
         Mockito.doReturn(null).when(this.clusterRoleIndexer).getByKey(KeyUtil.buildKey("resource-group-controller.resource-group.ten1010.io:group1"));
@@ -46,11 +43,9 @@ class ClusterRoleReconcilerTest {
         clusterRoleReconciler.reconcile(new Request("resource-group-controller.resource-group.ten1010.io:group1"));
         try {
             Mockito.verify(this.rbacAuthorizationV1Api).createClusterRole(
-                    Mockito.argThat(clusterRole -> clusterRole.getMetadata().getName().equals("resource-group-controller.resource-group.ten1010.io:group1")),
-                    Mockito.eq(null),
-                    Mockito.eq(null),
-                    Mockito.eq(null),
-                    Mockito.eq(null));
+                            Mockito.argThat(clusterRole ->
+                                    clusterRole.getMetadata().getName().equals("resource-group-controller.resource-group.ten1010.io:group1")))
+                    .execute();
         } catch (ApiException e) {
             Assertions.fail();
         }

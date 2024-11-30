@@ -1,4 +1,4 @@
-package io.ten1010.aipub.projectcontroller.controller.cluster.secret;
+package io.ten1010.aipub.projectcontroller.controller.cluster.projectbindingsecret;
 
 import io.kubernetes.client.extended.controller.reconciler.Reconciler;
 import io.kubernetes.client.extended.controller.reconciler.Request;
@@ -13,6 +13,7 @@ import io.ten1010.aipub.projectcontroller.core.ImagePullSecretUtil;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
@@ -47,38 +48,53 @@ public class ProjectBindingSecretReconciler implements Reconciler {
     public Result reconcile(Request request) {
         return this.template.execute(
                 () -> {
+                    log.info("Reconciling ProjectBindingSecret [{}]", request.getName());
+                    String projectBindingSecretKey = KeyUtil.buildKey(request.getNamespace(), request.getName());
+                    Optional<V1Secret> projectBindingSecretOpt = Optional.ofNullable(this.secretIndexer.getByKey(projectBindingSecretKey));
+
                     String imageNamespaceGroupKey = KeyUtil.buildKey(request.getName());
                     Optional<V1alpha1ImageNamespaceGroup> imageNamespaceGroupOpt = Optional.ofNullable(this.imageNamespaceGroupIndexer.getByKey(imageNamespaceGroupKey));
                     if (imageNamespaceGroupOpt.isEmpty()) {
-                        log.debug("ImageNamespaceGroup [{}] not founded while reconciling", imageNamespaceGroupKey);
+                        log.info("ImageNamespaceGroup [{}] not founded while reconciling", imageNamespaceGroupKey);
+                        if (projectBindingSecretOpt.isPresent()) {
+                            deleteSecret(request.getNamespace(), request.getName());
+                            log.info("Deleted Secret [{}] because ImageNamespaceGroup not found", projectBindingSecretKey);
+                        }
                         return new Result(false);
                     }
                     V1alpha1ImageNamespaceGroup imageNamespaceGroup = imageNamespaceGroupOpt.get();
-                    Objects.requireNonNull(imageNamespaceGroup.getSecret(), "ImageNamespaceGroup's secret must not be null");
-                    String registrySecretKey = KeyUtil.buildKey(this.registrySecretNamespace, imageNamespaceGroup.getSecret().getName());
-                    Optional<V1Secret> registrySecretOpt = Optional.ofNullable(secretIndexer.getByKey(registrySecretKey));
+
+                    String registrySecretKey = KeyUtil.buildKey(this.registrySecretNamespace, request.getName());
+                    Optional<V1Secret> registrySecretOpt = Optional.ofNullable(this.secretIndexer.getByKey(registrySecretKey));
                     if (registrySecretOpt.isEmpty()) {
-                        log.debug("Registry Secret [{}] not founded while reconciling", registrySecretKey);
-                        return new Result(true, Duration.ofSeconds(3));
-                    }
-                    V1Secret registrySecret = registrySecretOpt.get();
-                    if (!ImagePullSecretUtil.hasPullSecretData(registrySecret)) {
-                        log.debug("Registry Secret [{}] doesn't have imagePullSecret while reconciling", registrySecretKey);
-                        return new Result(true, Duration.ofSeconds(3));
-                    }
-                    String projectBindingSecretKey = KeyUtil.buildKey(request.getNamespace(), request.getName());
-                    Optional<V1Secret> projectBindingSecretOpt = Optional.ofNullable(this.secretIndexer.getByKey(projectBindingSecretKey));
-                    if (projectBindingSecretOpt.isEmpty()) {
-                        createSecretByRegistrySecret(request.getName(), request.getNamespace(), ImagePullSecretUtil.getPullSecretValue(registrySecret));
-                        log.debug("Created Project binding Secret [{}] for Project Namespace[{}] while reconciling", projectBindingSecretKey, request.getNamespace());
+                        log.info("Registry Secret [{}] not founded while reconciling", registrySecretKey);
+                        if (projectBindingSecretOpt.isPresent()) {
+                            deleteSecret(request.getNamespace(), request.getName());
+                            log.info("Deleted Secret [{}] because Registry Secret not found", projectBindingSecretKey);
+                        }
                         return new Result(false);
                     }
+                    V1Secret registrySecret = registrySecretOpt.get();
+
+                    if (!ImagePullSecretUtil.hasPullSecretData(registrySecret)) {
+                        if (projectBindingSecretOpt.isPresent()) {
+                            deleteSecret(request.getNamespace(), request.getName());
+                            log.info("Deleted Secret [{}] which has no image pull secret from registry key", projectBindingSecretKey);
+                        }
+                        throw new RuntimeException("Registry Secret must have data");
+                    }
+
+                    if (projectBindingSecretOpt.isEmpty()) {
+                        createSecretByRegistrySecret(request.getNamespace(), request.getName(), registrySecret);
+                        log.info("Created Secret [{}] for Project Namespace[{}] while reconciling", projectBindingSecretKey, request.getNamespace());
+                    }
+
                     V1Secret projectBindingSecret = projectBindingSecretOpt.get();
                     if (!ImagePullSecretUtil.hasPullSecretData(projectBindingSecret)) {
-                        deleteSecret(K8sObjectUtil.getName(projectBindingSecret), K8sObjectUtil.getNamespace(projectBindingSecret));
-                        log.debug("Deleted Project binding Secret [{}] which doesn't have imagePullSecret while reconciling", projectBindingSecretKey);
-                        createSecretByRegistrySecret(request.getName(), request.getNamespace(), ImagePullSecretUtil.getPullSecretValue(registrySecret));
-                        log.debug("Created Project binding Secret [{}] for Project Namespace[{}] while reconciling", projectBindingSecretKey, request.getNamespace());
+                        deleteSecret(K8sObjectUtil.getNamespace(projectBindingSecret), K8sObjectUtil.getName(projectBindingSecret));
+                        log.info("Deleted Project binding Secret [{}] which doesn't have imagePullSecret data while reconciling", projectBindingSecretKey);
+                        createSecretByRegistrySecret(request.getNamespace(), request.getName(), registrySecret);
+                        log.info("Created Project binding Secret [{}] for Project Namespace[{}] while reconciling", projectBindingSecretKey, request.getNamespace());
                         return new Result(false);
                     }
                     return new Result(false);
@@ -86,14 +102,15 @@ public class ProjectBindingSecretReconciler implements Reconciler {
                 request);
     }
 
-    private void createSecretByRegistrySecret(String name, String namespace, String secretValue) throws ApiException {
+    private void createSecretByRegistrySecret(String namespace, String name, V1Secret registrySecret) throws ApiException {
         V1Secret secret = new V1Secret();
         V1ObjectMeta objectMeta = new V1ObjectMeta();
         objectMeta.setName(name);
         objectMeta.setNamespace(namespace);
         secret.setMetadata(objectMeta);
         secret.setKind("kubernetes.io/dockerconfigjson");
-        ImagePullSecretUtil.applyNewSecretValue(secret, secretValue);
+        secret.setData(registrySecret.getData());
+
         this.coreV1Api.createNamespacedSecret(namespace, secret)
                 .execute();
     }

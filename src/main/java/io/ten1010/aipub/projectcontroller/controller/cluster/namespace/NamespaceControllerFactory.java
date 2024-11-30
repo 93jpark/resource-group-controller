@@ -34,7 +34,8 @@ public class NamespaceControllerFactory {
                 .withName("namespace-controller")
                 .withWorkerCount(1)
                 .watch(ProjectWatch::new)
-                .watch(workQueue -> new ImageNamespaceGroupWatch(workQueue, projectProperties.getRegistrySecretNamespace()))
+                // todo registry namespace를 생성해줘야할지?
+//                .watch(workQueue -> new ImageNamespaceGroupWatch(workQueue, projectProperties.getRegistrySecretNamespace()))
                 .withReconciler(new NamespaceReconciler(
                         this.namespaceIndexer,
                         this.projectIndexer,

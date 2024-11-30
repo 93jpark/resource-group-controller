@@ -4,6 +4,8 @@ import io.kubernetes.client.extended.controller.ControllerWatch;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.ResourceEventHandler;
+import io.kubernetes.client.informer.cache.Indexer;
+import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1TypedObjectReference;
 import io.ten1010.aipub.projectcontroller.controller.EventHandlerUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
@@ -18,9 +20,13 @@ public class ImageNamespaceGroupWatch implements ControllerWatch<V1alpha1ImageNa
     public static class EventHandler implements ResourceEventHandler<V1alpha1ImageNamespaceGroup> {
 
         private WorkQueue<Request> queue;
+        private Indexer<V1Secret> secretIndexer;
+        private String projectSecretNamespace;
 
-        public EventHandler(WorkQueue<Request> queue) {
+        public EventHandler(WorkQueue<Request> queue, Indexer<V1Secret> secretIndexer, String projectSecretNamespace) {
             this.queue = queue;
+            this.secretIndexer = secretIndexer;
+            this.projectSecretNamespace = projectSecretNamespace;
         }
 
         @Override
@@ -36,7 +42,7 @@ public class ImageNamespaceGroupWatch implements ControllerWatch<V1alpha1ImageNa
             }
             Optional<V1TypedObjectReference> oldPullSecretOpt = Optional.ofNullable(oldObj.getSecret());
             Optional<V1TypedObjectReference> newPullSecretOpt = Optional.ofNullable(newObj.getSecret());
-            if (oldPullSecretOpt.equals(newPullSecretOpt)) {
+            if (!oldPullSecretOpt.equals(newPullSecretOpt)) {
                 this.queue.add(EventHandlerUtil.buildRequestFromClusterScopedObject(newObj));
                 return;
             }
@@ -49,9 +55,13 @@ public class ImageNamespaceGroupWatch implements ControllerWatch<V1alpha1ImageNa
     }
 
     private WorkQueue<Request> queue;
+    private Indexer<V1Secret> secretIndexer;
+    private String projectSecretNamespace;
 
-    public ImageNamespaceGroupWatch(WorkQueue<Request> queue) {
+    public ImageNamespaceGroupWatch(WorkQueue<Request> queue, Indexer<V1Secret> secretIndexer, String projectSecretNamespace) {
         this.queue = queue;
+        this.secretIndexer = secretIndexer;
+        this.projectSecretNamespace = projectSecretNamespace;
     }
 
     @Override
@@ -61,7 +71,7 @@ public class ImageNamespaceGroupWatch implements ControllerWatch<V1alpha1ImageNa
 
     @Override
     public ResourceEventHandler<V1alpha1ImageNamespaceGroup> getResourceEventHandler() {
-        return new EventHandler(this.queue);
+        return new EventHandler(this.queue, this.secretIndexer, this.projectSecretNamespace);
     }
 
     @Override

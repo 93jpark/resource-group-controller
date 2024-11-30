@@ -1,5 +1,7 @@
 package io.ten1010.aipub.projectcontroller.controller.cluster.imagenamespacegroup;
 
+import com.google.gson.JsonObject;
+import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.extended.controller.reconciler.Reconciler;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.controller.reconciler.Result;
@@ -61,30 +63,32 @@ public class ImageNamespaceGroupReconciler implements Reconciler {
     public Result reconcile(Request request) {
         return this.template.execute(
                 () -> {
+                    log.info("Reconciling ImageNamespaceGroup [{}]", request.getName());
                     String imageNamespaceGroupKey = KeyUtil.buildKey(request.getName());
                     Optional<V1alpha1ImageNamespaceGroup> imageNamespaceGroupOpt = Optional.ofNullable(this.imageNamespaceGroupIndexer.getByKey(imageNamespaceGroupKey));
                     String robotUsername = this.robotResolver.resolveRobotUsername(request.getName());
+                    this.robotResolver.resolveRobotUsername(request.getName());
                     Optional<RegistryRobot> robotOpt = this.registryRobotService.findByUsername(robotUsername);
                     if (imageNamespaceGroupOpt.isEmpty() && robotOpt.isPresent()) {
                         Objects.requireNonNull(robotOpt.get().getId(), "robot id must not be null");
                         this.registryRobotService.deleteRobot(robotOpt.get().getId());
-                        log.debug("Deleted Robot [{}] because ImageNamespaceGroup [{}] not found", robotUsername, imageNamespaceGroupKey);
+                        log.info("Deleted Robot [{}] because ImageNamespaceGroup [{}] not found", robotUsername, imageNamespaceGroupKey);
                         return new Result(false);
                     }
                     if (imageNamespaceGroupOpt.isPresent()) {
                         Objects.requireNonNull(imageNamespaceGroupOpt.get().getMetadata(), "metadata must not be null");
                         Objects.requireNonNull(imageNamespaceGroupOpt.get().getMetadata().getName(), "name must not be null");
                         V1alpha1ImageNamespaceGroup imageNamespaceGroup = imageNamespaceGroupOpt.get();
-                        log.debug("Reconciling ImageNamespaceGroup [{}]", imageNamespaceGroupKey);
                         if (robotOpt.isEmpty()) {
-                            log.debug("RegistryRobot [{}] not founded while reconciling", imageNamespaceGroup.getMetadata().getName());
-                            return new Result(false);
+                            log.info("RegistryRobot [{}] not founded while reconciling", robotUsername);
+                            return new Result(true, Duration.ofSeconds(3));
                         } else {
                             Objects.requireNonNull(robotOpt.get().getId(), "robot id must not be null");
                             RegistryRobot robot = robotOpt.get();
                             List<String> robotImageNamespaces = robot.getPermissions().stream().map(RobotPermission::getNamespace).toList();
-                            if (imageNamespaceGroup.getAipubImageNamespaces().equals(robotImageNamespaces)) {
+                            if (!imageNamespaceGroup.getAipubImageNamespaces().equals(robotImageNamespaces)) {
                                 this.registryRobotService.updateRobot(robot.getId(), robot);
+                                log.info("Updated Robot [{}] because registry image namespace", robotUsername);
                             }
                         }
                         String secretKey = KeyUtil.buildKey(this.registrySecretNamespace, K8sObjectUtil.getName(imageNamespaceGroup));
@@ -93,22 +97,34 @@ public class ImageNamespaceGroupReconciler implements Reconciler {
                             V1Secret secret = secretOpt.get();
                             if (imageNamespaceGroup.getSecret() == null) {
                                 updateImageNamespaceGroupSecretRef(imageNamespaceGroup, secret);
-                                log.debug("Updated ImageNamespaceGroup [{}] with secret [{}]", imageNamespaceGroupKey, secretKey);
+                                log.info("Updated ImageNamespaceGroup [{}] with secret [{}]", imageNamespaceGroupKey, secretKey);
+                                return new Result(false);
                             }
                         }
                         return new Result(false);
                     }
+                    log.info("ImageNamespaceGroup [{}] not founded while reconciling", imageNamespaceGroupKey);
                     return new Result(false);
                 }, request);
     }
 
     private void updateImageNamespaceGroupSecretRef(V1alpha1ImageNamespaceGroup imageNamespaceGroup, V1Secret secret) throws ApiException {
-        V1TypedObjectReference secretRef = new V1TypedObjectReference();
-        secretRef.setKind(secret.getKind());
-        secretRef.setName(secret.getMetadata().getName());
-        secretRef.setNamespace(secret.getMetadata().getNamespace());
-        imageNamespaceGroup.setSecret(secretRef);
-        this.imageNamespaceGroupApi.update(imageNamespaceGroup);
+        JsonObject patchBody = new JsonObject();
+        patchBody.add("spec", new JsonObject());
+
+        JsonObject secretObject = new JsonObject();
+        secretObject.addProperty("kind", secret.getKind());
+        secretObject.addProperty("name", secret.getMetadata().getName());
+        secretObject.addProperty("namespace", secret.getMetadata().getNamespace());
+        patchBody.getAsJsonObject("spec").add("secret", secretObject);
+
+        V1Patch patch = new V1Patch(patchBody.toString());
+
+        this.imageNamespaceGroupApi.patch(
+                K8sObjectUtil.getName(imageNamespaceGroup),
+                V1Patch.PATCH_FORMAT_JSON_MERGE_PATCH,
+                patch
+        );
     }
 
 }

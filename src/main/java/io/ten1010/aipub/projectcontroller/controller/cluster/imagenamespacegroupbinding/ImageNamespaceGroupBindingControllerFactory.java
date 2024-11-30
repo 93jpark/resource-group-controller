@@ -6,7 +6,6 @@ import io.kubernetes.client.informer.SharedInformerFactory;
 import io.kubernetes.client.informer.cache.Indexer;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.util.generic.GenericKubernetesApi;
-import io.ten1010.aipub.projectcontroller.controller.cluster.imagenamespacegroup.SecretWatch;
 import io.ten1010.aipub.projectcontroller.core.K8sApis;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBinding;
@@ -41,13 +40,11 @@ public class ImageNamespaceGroupBindingControllerFactory {
                 .withName("image-namespace-group-binding-controller")
                 .withWorkerCount(1)
                 .watch(ImageNamespaceGroupBindingWatch::new)
-                .watch(workQueue -> new SecretWatch(workQueue, this.imageNamespaceGroupIndexer))
                 .withReconciler(new ImageNamespaceGroupBindingReconciler(
                         this.imageNamespaceGroupIndexer,
                         this.imageNamespaceGroupBindingIndexer,
                         this.projectIndexer,
-                        this.imageNamespaceGroupBindingApi,
-                        this.coreV1Api)
+                        this.imageNamespaceGroupBindingApi)
                 ).build();
     }
 

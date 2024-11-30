@@ -5,24 +5,25 @@ import io.kubernetes.client.extended.controller.ControllerWatch;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.workqueue.WorkQueue;
 import io.kubernetes.client.informer.ResourceEventHandler;
-import io.kubernetes.client.openapi.models.V1Subject;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroup;
+import io.kubernetes.client.openapi.models.RbacV1Subject;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
 
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup> {
+public class ResourceGroupWatch implements ControllerWatch<V1alpha1NodeGroup> {
 
     public static final Duration RESYNC_PERIOD = Duration.ofSeconds(30);
 
-    public static class EventHandler implements ResourceEventHandler<V1Beta1ResourceGroup> {
+    public static class EventHandler implements ResourceEventHandler<V1alpha1NodeGroup> {
 
-        private static List<String> getNamespaces(V1Beta1ResourceGroup obj) {
-            if (obj.getSpec() == null) {
-                return new ArrayList<>();
-            }
-            return obj.getSpec().getNamespaces();
+        private static List<String> getNamespaces(V1alpha1NodeGroup obj) {
+//            if (obj.getSpec() == null) {
+//                return new ArrayList<>();
+//            }
+//            return obj.getSpec().getNamespaces();
+            return List.of();
         }
 
         private static Set<String> getAddedOrDeletedNamespaces(List<String> oldNamespaces, List<String> newNamespaces) {
@@ -49,14 +50,15 @@ public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup>
             return obj.getMetadata().getName();
         }
 
-        private static List<V1Subject> getSubjects(V1Beta1ResourceGroup obj) {
-            if (obj.getSpec() == null) {
-                return new ArrayList<>();
-            }
-            return obj.getSpec().getSubjects();
+        private static List<RbacV1Subject> getSubjects(V1alpha1NodeGroup obj) {
+//            if (obj.getSpec() == null) {
+//                return new ArrayList<>();
+//            }
+//            return obj.getSpec().getSubjects();
+            return List.of();
         }
 
-        private static boolean changeExistOnSubjects(V1Beta1ResourceGroup oldObj, V1Beta1ResourceGroup newObj) {
+        private static boolean changeExistOnSubjects(V1alpha1NodeGroup oldObj, V1alpha1NodeGroup newObj) {
             return !getSubjects(oldObj).equals(getSubjects(newObj));
         }
 
@@ -71,7 +73,7 @@ public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup>
         }
 
         @Override
-        public void onAdd(V1Beta1ResourceGroup obj) {
+        public void onAdd(V1alpha1NodeGroup obj) {
             String groupName = getName(obj);
             Set<Request> requests = getNamespaces(obj).stream()
                     .map(e -> buildRequest(groupName, e))
@@ -80,7 +82,7 @@ public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup>
         }
 
         @Override
-        public void onUpdate(V1Beta1ResourceGroup oldObj, V1Beta1ResourceGroup newObj) {
+        public void onUpdate(V1alpha1NodeGroup oldObj, V1alpha1NodeGroup newObj) {
             String groupName = getName(newObj);
             Set<Request> requests1 = getAddedOrDeletedNamespaces(getNamespaces(oldObj), getNamespaces(newObj)).stream()
                     .map(e -> buildRequest(groupName, e))
@@ -95,7 +97,7 @@ public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup>
         }
 
         @Override
-        public void onDelete(V1Beta1ResourceGroup obj, boolean deletedFinalStateUnknown) {
+        public void onDelete(V1alpha1NodeGroup obj, boolean deletedFinalStateUnknown) {
         }
 
     }
@@ -107,12 +109,12 @@ public class ResourceGroupWatch implements ControllerWatch<V1Beta1ResourceGroup>
     }
 
     @Override
-    public Class<V1Beta1ResourceGroup> getResourceClass() {
-        return V1Beta1ResourceGroup.class;
+    public Class<V1alpha1NodeGroup> getResourceClass() {
+        return V1alpha1NodeGroup.class;
     }
 
     @Override
-    public ResourceEventHandler<V1Beta1ResourceGroup> getResourceEventHandler() {
+    public ResourceEventHandler<V1alpha1NodeGroup> getResourceEventHandler() {
         return new EventHandler(this.queue);
     }
 

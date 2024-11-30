@@ -9,10 +9,11 @@ import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import io.ten1010.aipub.projectcontroller.core.IndexNames;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
 import io.ten1010.aipub.projectcontroller.core.Taints;
-import io.ten1010.groupcontroller.model.V1Beta1DaemonSet;
-import io.ten1010.groupcontroller.model.V1Beta1K8sObjectReference;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroup;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroupSpec;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBinding;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroupBinding;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,46 +27,56 @@ import java.util.stream.Collectors;
 
 class DaemonSetReconcilerTest {
 
-    Indexer<V1Beta1ResourceGroup> groupIndexer;
+    Indexer<V1alpha1Project> projectIndexer;
+    Indexer<V1alpha1NodeGroup> nodeGroupIndexer;
+    Indexer<V1alpha1NodeGroupBinding> nodeGroupBindingIndexer;
+    Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer;
+    Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer;
+    Indexer<V1Secret> secretIndexer;
     Reconciliation reconciliation;
     Indexer<V1DaemonSet> daemonSetIndexer;
     AppsV1Api appsV1Api;
 
     @BeforeEach
     void setUp() {
-        this.groupIndexer = Mockito.mock(Indexer.class);
-        this.reconciliation = new Reconciliation(this.groupIndexer);
+        this.projectIndexer = Mockito.mock(Indexer.class);
+        this.nodeGroupIndexer = Mockito.mock(Indexer.class);
+        this.nodeGroupBindingIndexer = Mockito.mock(Indexer.class);
+        this.imageNamespaceGroupIndexer = Mockito.mock(Indexer.class);
+        this.imageNamespaceGroupBindingIndexer = Mockito.mock(Indexer.class);
+        this.secretIndexer = Mockito.mock(Indexer.class);
+        this.reconciliation = new Reconciliation(this.projectIndexer, this.nodeGroupIndexer, this.nodeGroupBindingIndexer, this.imageNamespaceGroupIndexer, this.imageNamespaceGroupBindingIndexer, this.secretIndexer);
         this.daemonSetIndexer = Mockito.mock(Indexer.class);
         this.appsV1Api = Mockito.mock(AppsV1Api.class);
     }
 
     @Test
     void should_patch_tolerations_of_the_daemon_set() {
-        V1Beta1ResourceGroup group1 = new V1Beta1ResourceGroup();
+        V1alpha1NodeGroup group1 = new V1alpha1NodeGroup();
         V1ObjectMeta meta1 = new V1ObjectMeta();
         meta1.setName("group1");
         group1.setMetadata(meta1);
-        V1Beta1ResourceGroupSpec spec1 = new V1Beta1ResourceGroupSpec();
-        group1.setSpec(spec1);
-        V1Beta1K8sObjectReference dsRef1 = new V1Beta1K8sObjectReference();
-        dsRef1.setNamespace("ns1");
-        dsRef1.setName("ds1");
-        V1Beta1DaemonSet daemonSet1 = new V1Beta1DaemonSet();
-        daemonSet1.setDaemonSets(List.of(dsRef1));
-        spec1.setDaemonSet(daemonSet1);
+//        V1alpha1NodeGroupSpec spec1 = new V1alpha1NodeGroupSpec();
+//        group1.setSpec(spec1);
+//        V1Beta1K8sObjectReference dsRef1 = new V1Beta1K8sObjectReference();
+//        dsRef1.setNamespace("ns1");
+//        dsRef1.setName("ds1");
+//        V1Beta1DaemonSet daemonSet1 = new V1Beta1DaemonSet();
+//        daemonSet1.setDaemonSets(List.of(dsRef1));
+//        spec1.setDaemonSet(daemonSet1);
 
-        V1Beta1ResourceGroup group2 = new V1Beta1ResourceGroup();
+        V1alpha1NodeGroup group2 = new V1alpha1NodeGroup();
         V1ObjectMeta meta2 = new V1ObjectMeta();
         meta2.setName("group2");
         group2.setMetadata(meta2);
-        V1Beta1ResourceGroupSpec spec2 = new V1Beta1ResourceGroupSpec();
-        group2.setSpec(spec2);
-        V1Beta1K8sObjectReference dsRef2 = new V1Beta1K8sObjectReference();
-        dsRef2.setNamespace("ns1");
-        dsRef2.setName("ds1");
-        V1Beta1DaemonSet daemonSet2 = new V1Beta1DaemonSet();
-        daemonSet2.setDaemonSets(List.of(dsRef2));
-        spec2.setDaemonSet(daemonSet2);
+//        V1alpha1NodeGroupSpec spec2 = new V1alpha1NodeGroupSpec();
+//        group2.setSpec(spec2);
+//        V1Beta1K8sObjectReference dsRef2 = new V1Beta1K8sObjectReference();
+//        dsRef2.setNamespace("ns1");
+//        dsRef2.setName("ds1");
+//        V1Beta1DaemonSet daemonSet2 = new V1Beta1DaemonSet();
+//        daemonSet2.setDaemonSets(List.of(dsRef2));
+//        spec2.setDaemonSet(daemonSet2);
 
         V1DaemonSet ds1 = new V1DaemonSet();
         V1ObjectMeta dsMeta1 = new V1ObjectMeta();
@@ -81,7 +92,7 @@ class DaemonSetReconcilerTest {
         ds1.setSpec(dsSpec1);
 
         Mockito.doReturn(List.of(group1, group2))
-                .when(this.groupIndexer)
+                .when(this.nodeGroupIndexer)
                 .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, "ns1");
         Mockito.doReturn(ds1).when(this.daemonSetIndexer).getByKey(KeyUtil.buildKey("ns1", "ds1"));
         DaemonSetReconciler daemonSetReconciler = new DaemonSetReconciler(this.daemonSetIndexer, this.reconciliation, this.appsV1Api);
@@ -96,7 +107,7 @@ class DaemonSetReconcilerTest {
                                     if (e.getKey() == null) {
                                         return false;
                                     }
-                                    return e.getKey().equals(Taints.KEY_RESOURCE_GROUP_EXCLUSIVE);
+                                    return e.getKey().equals(Taints.KEY_NODE_GROUP);
                                 })
                                 .map(V1Toleration::getValue)
                                 .collect(Collectors.toList());
@@ -105,11 +116,7 @@ class DaemonSetReconcilerTest {
                         }
                         Set<String> valueSet = new HashSet<>(tolerationValues);
                         return valueSet.equals(Set.of("group1", "group2"));
-                    }),
-                    Mockito.eq(null),
-                    Mockito.eq(null),
-                    Mockito.eq(null),
-                    Mockito.eq(null));
+                    })).execute();
             Mockito.verifyNoMoreInteractions(this.appsV1Api);
         } catch (ApiException e) {
             Assertions.fail();

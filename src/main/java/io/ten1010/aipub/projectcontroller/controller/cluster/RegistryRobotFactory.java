@@ -13,7 +13,7 @@ public final class RegistryRobotFactory {
         RegistryRobot robot = new RegistryRobot();
         robot.setUsername(robotUsername);
         List<RobotPermission> robotPermissions = new ArrayList<>();
-        for(String imageNamespace : aipubImageNamespaces) {
+        for (String imageNamespace : aipubImageNamespaces) {
             List<RegistryAccess> registryAccesses = new ArrayList<>();
             RegistryAccess registryAccess = new RegistryAccess();
             registryAccess.setResource("repository");

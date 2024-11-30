@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 @ToString
 public class NodeGroupPolicy {
-
+    // todo node group reconciler가 필요없다면 삭제
     private String nodeGroupName;
     private String nodeGroupNamespace;
     private List<String> groupNodes;
@@ -35,7 +35,6 @@ public class NodeGroupPolicy {
     public static NodeGroupPolicy from(V1alpha1NodeGroup nodeGroup) {
         return NodeGroupPolicy.builder()
                 .nodeGroupName(K8sObjectUtil.getName(nodeGroup))
-                .nodeGroupNamespace(K8sObjectUtil.getNamespace(nodeGroup))
                 .groupNodes(nodeGroup.getNodes())
                 .allowAllDaemonSets(isAllDaemonSetAllowed(nodeGroup))
                 .allowedDaemonSetKeys(getAllowedDaemonSets(nodeGroup))

@@ -266,7 +266,11 @@ public class Reconciliation {
      */
     private static List<V1LocalObjectReference> reconcileImagePullSecrets(
             List<V1LocalObjectReference> existingImagePullSecrets, List<V1Secret> projectImagePullSecrets) {
+        if (existingImagePullSecrets.isEmpty()) {
+
+        }
         Set<String> existingSecretNames = existingImagePullSecrets.stream()
+                .filter(Objects::nonNull)
                 .map(V1LocalObjectReference::getName)
                 .collect(Collectors.toSet());
         List<V1LocalObjectReference> requiredImagePullSecrets = projectImagePullSecrets.stream()
@@ -278,6 +282,7 @@ public class Reconciliation {
                 }).toList();
         List<V1LocalObjectReference> reconciledImagePullSecrets = new ArrayList<>(existingImagePullSecrets);
         requiredImagePullSecrets.stream()
+                .filter(Objects::nonNull)
                 .filter(imagePullSecret -> !existingSecretNames.contains(imagePullSecret.getName()))
                 .forEach(reconciledImagePullSecrets::add);
         return reconciledImagePullSecrets;
@@ -538,8 +543,11 @@ public class Reconciliation {
      * @return
      */
     private List<V1Secret> resolveProjectImagePullSecretsByNamespace(String namespace) {
-        V1alpha1Project project = this.projectIndexer.getByKey(KeyUtil.buildKey(namespace));
-        List<V1alpha1ImageNamespaceGroup> imageNamespaceGroups = resolveImageNamespaceGroupBindingsByProject(project);
+        Optional<V1alpha1Project> projectOpt = Optional.ofNullable(this.projectIndexer.getByKey(KeyUtil.buildKey(namespace)));
+        if (projectOpt.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<V1alpha1ImageNamespaceGroup> imageNamespaceGroups = resolveImageNamespaceGroupBindingsByProject(projectOpt.get());
         return resolveNamespacedImageNamespaceGroupSecrets(imageNamespaceGroups, namespace);
     }
 
@@ -586,8 +594,11 @@ public class Reconciliation {
      * @return
      */
     private List<V1alpha1NodeGroup> resolveNodeGroupByNamespace(String namespace) {
-        V1alpha1Project project = this.projectIndexer.getByKey(KeyUtil.buildKey(namespace));
-        List<V1alpha1NodeGroupBinding> nodeGroupBindings = resolveNodeGroupBindingsByProjects(project);
+        Optional<V1alpha1Project> projectOpt = Optional.ofNullable(this.projectIndexer.getByKey(KeyUtil.buildKey(namespace)));
+        if (projectOpt.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<V1alpha1NodeGroupBinding> nodeGroupBindings = resolveNodeGroupBindingsByProjects(projectOpt.get());
         return resolveNodeGroupsByNodeGroupBindings(nodeGroupBindings);
     }
 

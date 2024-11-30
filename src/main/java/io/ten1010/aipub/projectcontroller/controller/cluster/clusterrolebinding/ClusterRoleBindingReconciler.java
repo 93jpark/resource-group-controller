@@ -10,7 +10,7 @@ import io.kubernetes.client.openapi.models.*;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
 import io.ten1010.aipub.projectcontroller.controller.cluster.clusterrole.ResourceGroupClusterRoleName;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
@@ -37,22 +37,22 @@ public class ClusterRoleBindingReconciler implements Reconciler {
         return Optional.ofNullable(clusterRoleBinding.getRoleRef());
     }
 
-    private static List<V1Subject> getSubjects(V1ClusterRoleBinding clusterRoleBinding) {
+    private static List<RbacV1Subject> getSubjects(V1ClusterRoleBinding clusterRoleBinding) {
         return clusterRoleBinding.getSubjects() == null ? new ArrayList<>() : clusterRoleBinding.getSubjects();
     }
 
     private static V1OwnerReference buildOwnerReference(String groupName, String groupUid) {
         V1OwnerReferenceBuilder builder = new V1OwnerReferenceBuilder();
-        return builder.withApiVersion(V1Beta1ResourceGroup.API_VERSION)
+        return builder.withApiVersion("project.ten1010.io")
                 .withBlockOwnerDeletion(true)
                 .withController(true)
-                .withKind(V1Beta1ResourceGroup.KIND)
+                .withKind("NodeGroup")
                 .withName(groupName)
                 .withUid(groupUid)
                 .build();
     }
 
-    private static V1OwnerReference buildOwnerReference(V1Beta1ResourceGroup group) {
+    private static V1OwnerReference buildOwnerReference(V1alpha1NodeGroup group) {
         Objects.requireNonNull(group.getMetadata());
         Objects.requireNonNull(group.getMetadata().getName());
         Objects.requireNonNull(group.getMetadata().getUid());
@@ -60,13 +60,13 @@ public class ClusterRoleBindingReconciler implements Reconciler {
     }
 
     private KubernetesApiReconcileExceptionHandlingTemplate template;
-    private Indexer<V1Beta1ResourceGroup> groupIndexer;
+    private Indexer<V1alpha1NodeGroup> groupIndexer;
     private Indexer<V1ClusterRoleBinding> clusterRoleBindingIndexer;
     private Indexer<V1ClusterRole> clusterRoleIndexer;
     private RbacAuthorizationV1Api rbacAuthorizationV1Api;
 
     public ClusterRoleBindingReconciler(
-            Indexer<V1Beta1ResourceGroup> groupIndexer,
+            Indexer<V1alpha1NodeGroup> groupIndexer,
             Indexer<V1ClusterRoleBinding> clusterRoleBindingIndexer,
             Indexer<V1ClusterRole> clusterRoleIndexer,
             RbacAuthorizationV1Api rbacAuthorizationV1Api) {
@@ -85,15 +85,14 @@ public class ClusterRoleBindingReconciler implements Reconciler {
                         return new Result(false);
                     }
                     String groupName = ResourceGroupClusterRoleBindingName.fromClusterRoleBindingName(request.getName()).getResourceGroupName();
-                    V1Beta1ResourceGroup group = this.groupIndexer.getByKey(groupName);
+                    V1alpha1NodeGroup group = this.groupIndexer.getByKey(groupName);
                     if (group == null) {
                         deleteClusterRoleBindingIfExist(request.getName());
                         return new Result(false);
                     }
                     String clusterRoleName = new ResourceGroupClusterRoleName(groupName).getName();
                     V1RoleRef roleRef = buildClusterRoleRef(clusterRoleName);
-                    Objects.requireNonNull(group.getSpec());
-                    List<V1Subject> subjects = group.getSpec().getSubjects();
+                    List<RbacV1Subject> subjects = List.of(); // todo change
                     V1ClusterRoleBinding clusterRoleBinding = this.clusterRoleBindingIndexer.getByKey(KeyUtil.buildKey(request.getName()));
                     if (clusterRoleBinding == null) {
                         V1ClusterRole clusterRole = this.clusterRoleIndexer.getByKey(KeyUtil.buildKey(clusterRoleName));
@@ -114,7 +113,7 @@ public class ClusterRoleBindingReconciler implements Reconciler {
                 request);
     }
 
-    private void createClusterRoleBinding(String name, V1RoleRef roleRef, List<V1Subject> subjects, V1OwnerReference ownerReference) throws ApiException {
+    private void createClusterRoleBinding(String name, V1RoleRef roleRef, List<RbacV1Subject> subjects, V1OwnerReference ownerReference) throws ApiException {
         V1ClusterRoleBindingBuilder builder = new V1ClusterRoleBindingBuilder();
         V1ClusterRoleBinding clusterRoleBinding = builder.withNewMetadata()
                 .withName(name)
@@ -123,10 +122,10 @@ public class ClusterRoleBindingReconciler implements Reconciler {
                 .withRoleRef(roleRef)
                 .withSubjects(subjects)
                 .build();
-        this.rbacAuthorizationV1Api.createClusterRoleBinding(clusterRoleBinding, null, null, null, null);
+        this.rbacAuthorizationV1Api.createClusterRoleBinding(clusterRoleBinding).execute();
     }
 
-    private void updateClusterRoleBinding(V1ClusterRoleBinding target, V1RoleRef roleRef, List<V1Subject> subjects) throws ApiException {
+    private void updateClusterRoleBinding(V1ClusterRoleBinding target, V1RoleRef roleRef, List<RbacV1Subject> subjects) throws ApiException {
         V1ClusterRoleBindingBuilder builder = new V1ClusterRoleBindingBuilder(target);
         V1ClusterRoleBinding updated = builder
                 .withRoleRef(roleRef)
@@ -135,18 +134,11 @@ public class ClusterRoleBindingReconciler implements Reconciler {
         V1ObjectMeta meta = target.getMetadata();
         Objects.requireNonNull(meta);
         Objects.requireNonNull(meta.getName());
-        this.rbacAuthorizationV1Api.replaceClusterRoleBinding(meta.getName(), updated, null, null, null, null);
+        this.rbacAuthorizationV1Api.replaceClusterRoleBinding(meta.getName(), updated).execute();
     }
 
     private void deleteClusterRoleBinding(String name) throws ApiException {
-        this.rbacAuthorizationV1Api.deleteClusterRoleBinding(
-                name,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null);
+        this.rbacAuthorizationV1Api.deleteClusterRoleBinding(name).execute();
     }
 
     private void deleteClusterRoleBindingIfExist(String name) throws ApiException {

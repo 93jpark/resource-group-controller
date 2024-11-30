@@ -6,13 +6,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.kubernetes.client.informer.cache.Indexer;
+import io.kubernetes.client.openapi.models.V1DaemonSet;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodSpec;
+import io.kubernetes.client.openapi.models.V1Secret;
 import io.ten1010.aipub.projectcontroller.controller.Reconciliation;
 import io.ten1010.aipub.projectcontroller.core.IndexNames;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroup;
-import io.ten1010.groupcontroller.model.V1Beta1ResourceGroupSpec;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBinding;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroupBinding;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,24 +30,36 @@ import java.util.List;
 
 class AdmissionReviewServiceTest {
 
-    Indexer<V1Beta1ResourceGroup> groupIndexer;
+    Indexer<V1alpha1Project> projectIndexer;
+    Indexer<V1alpha1NodeGroup> nodeGroupIndexer;
+    Indexer<V1alpha1NodeGroupBinding> nodeGroupBindingIndexer;
+    Indexer<V1alpha1ImageNamespaceGroup> imageNamespaceGroupIndexer;
+    Indexer<V1alpha1ImageNamespaceGroupBinding> imageNamespaceGroupBindingIndexer;
+    Indexer<V1Secret> secretIndexer;
+    Indexer<V1DaemonSet> daemonSetIndexer;
     Reconciliation reconciliation;
 
     @BeforeEach
     void setUp() {
-        this.groupIndexer = Mockito.mock(Indexer.class);
-        this.reconciliation = new Reconciliation(this.groupIndexer);
+        this.projectIndexer = Mockito.mock(Indexer.class);
+        this.nodeGroupIndexer = Mockito.mock(Indexer.class);
+        this.nodeGroupBindingIndexer = Mockito.mock(Indexer.class);
+        this.imageNamespaceGroupIndexer = Mockito.mock(Indexer.class);
+        this.imageNamespaceGroupBindingIndexer = Mockito.mock(Indexer.class);
+        this.secretIndexer = Mockito.mock(Indexer.class);
+        this.daemonSetIndexer = Mockito.mock(Indexer.class);
+        this.reconciliation = new Reconciliation(this.projectIndexer, this.nodeGroupIndexer, this.nodeGroupBindingIndexer, this.imageNamespaceGroupIndexer, this.imageNamespaceGroupBindingIndexer, this.secretIndexer);
     }
 
     @Test
     void should_patch_affinity_and_tolerations() {
-        V1Beta1ResourceGroup group1 = new V1Beta1ResourceGroup();
+        V1alpha1NodeGroup group1 = new V1alpha1NodeGroup();
         V1ObjectMeta meta1 = new V1ObjectMeta();
         meta1.setName("group1");
         group1.setMetadata(meta1);
-        V1Beta1ResourceGroupSpec spec1 = new V1Beta1ResourceGroupSpec();
-        spec1.setNamespaces(List.of("ns1"));
-        group1.setSpec(spec1);
+//        V1alpha1NodeGroupSpec spec1 = new V1alpha1NodeGroupSpec();
+//        spec1.setNamespaces(List.of("ns1"));
+//        group1.setSpec(spec1);
 
         V1Pod pod1 = new V1Pod();
         V1ObjectMeta podMeta1 = new V1ObjectMeta();
@@ -54,7 +71,7 @@ class AdmissionReviewServiceTest {
         pod1.setSpec(podSpec1);
 
         Mockito.doReturn(List.of(group1))
-                .when(this.groupIndexer)
+                .when(this.nodeGroupIndexer)
                 .byIndex(IndexNames.BY_NAMESPACE_NAME_TO_NODE_GROUP_OBJECT, "ns1");
         AdmissionReviewService admissionReviewService = new AdmissionReviewService(this.reconciliation);
         V1AdmissionReviewRequest request = new V1AdmissionReviewRequest();
