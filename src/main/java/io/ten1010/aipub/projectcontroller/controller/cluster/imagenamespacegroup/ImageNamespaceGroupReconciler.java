@@ -1,5 +1,6 @@
 package io.ten1010.aipub.projectcontroller.controller.cluster.imagenamespacegroup;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.extended.controller.reconciler.Reconciler;
@@ -11,12 +12,15 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Secret;
 import io.kubernetes.client.openapi.models.V1TypedObjectReference;
 import io.kubernetes.client.util.generic.GenericKubernetesApi;
+import io.kubernetes.client.util.generic.KubernetesApiResponse;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
 import io.ten1010.aipub.projectcontroller.controller.cluster.RegistryRobotResolver;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroup;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupBinding;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1ImageNamespaceGroupList;
+import io.ten1010.aipub.projectcontroller.model.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.service.RegistryRobot;
 import io.ten1010.aipub.projectcontroller.service.RegistryRobotService;
 import io.ten1010.aipub.projectcontroller.service.RobotPermission;
@@ -110,21 +114,27 @@ public class ImageNamespaceGroupReconciler implements Reconciler {
 
     private void updateImageNamespaceGroupSecretRef(V1alpha1ImageNamespaceGroup imageNamespaceGroup, V1Secret secret) throws ApiException {
         JsonObject patchBody = new JsonObject();
-        patchBody.add("spec", new JsonObject());
+        JsonObject spec = new JsonObject();
 
-        JsonObject secretObject = new JsonObject();
-        secretObject.addProperty("kind", secret.getKind());
-        secretObject.addProperty("name", secret.getMetadata().getName());
-        secretObject.addProperty("namespace", secret.getMetadata().getNamespace());
-        patchBody.getAsJsonObject("spec").add("secret", secretObject);
+        JsonObject secretRef = new JsonObject();
+        secretRef.addProperty("kind", secret.getKind());
+        secretRef.addProperty("name", K8sObjectUtil.getName(secret));
+        secretRef.addProperty("namespace", K8sObjectUtil.getNamespace(secret));
+
+        spec.add("secret", secretRef);
+        patchBody.add("spec", spec);
 
         V1Patch patch = new V1Patch(patchBody.toString());
 
-        this.imageNamespaceGroupApi.patch(
+        log.info("Patch content: {}", patchBody.toString());
+
+        KubernetesApiResponse<V1alpha1ImageNamespaceGroup> result = this.imageNamespaceGroupApi.patch(
                 K8sObjectUtil.getName(imageNamespaceGroup),
-                V1Patch.PATCH_FORMAT_JSON_MERGE_PATCH,
+                V1Patch.PATCH_FORMAT_STRATEGIC_MERGE_PATCH,
                 patch
         );
+
+        log.info("update image ns group result: {}", result.isSuccess());
     }
 
 }

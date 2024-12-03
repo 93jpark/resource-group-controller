@@ -1,13 +1,14 @@
 package io.ten1010.aipub.projectcontroller.controller.cluster.imagenamespacegroupbinding;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.extended.controller.reconciler.Reconciler;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.controller.reconciler.Result;
 import io.kubernetes.client.informer.cache.Indexer;
-import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.util.generic.GenericKubernetesApi;
+import io.kubernetes.client.util.generic.KubernetesApiResponse;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
@@ -66,7 +67,7 @@ public class ImageNamespaceGroupBindingReconciler implements Reconciler {
                     V1alpha1ImageNamespaceGroup imageNamespaceGroup = imageNamespaceGroupOpt.get();
 
                     if (imageNamespaceGroupBinding.getImageNamespaceGroupRef() == null ||
-                        !K8sObjectUtil.getName(imageNamespaceGroup).equals(imageNamespaceGroupBinding.getImageNamespaceGroupRef())) {
+                            !K8sObjectUtil.getName(imageNamespaceGroup).equals(imageNamespaceGroupBinding.getImageNamespaceGroupRef())) {
                         updateImageNamespaceGroupBinding(imageNamespaceGroupBinding, K8sObjectUtil.getName(imageNamespaceGroup));
                         log.info("Updated ImageNamespaceGroupBinding [{}] ref to [{}]", imageNamespaceGroupBindingKey, K8sObjectUtil.getName(imageNamespaceGroup));
                         return new Result(false);
@@ -77,16 +78,21 @@ public class ImageNamespaceGroupBindingReconciler implements Reconciler {
 
     private void updateImageNamespaceGroupBinding(V1alpha1ImageNamespaceGroupBinding imageNamespaceGroupBinding, String imageNamespaceGroupRef) {
         JsonObject patchBody = new JsonObject();
-        patchBody.add("spec", new JsonObject());
-        patchBody.getAsJsonObject("spec").addProperty("imageNamespaceGroupRef", imageNamespaceGroupRef);
+        JsonObject spec = new JsonObject();
+        spec.addProperty("imageNamespaceGroupRef", imageNamespaceGroupRef);
+        patchBody.add("spec", spec);
 
         V1Patch patch = new V1Patch(patchBody.toString());
 
-        this.imageNamespaceGroupBindingApi.patch(
+        log.info("Patch content: {}", patchBody.toString());
+
+        KubernetesApiResponse<V1alpha1ImageNamespaceGroupBinding> result = this.imageNamespaceGroupBindingApi.patch(
                 K8sObjectUtil.getName(imageNamespaceGroupBinding),
-                V1Patch.PATCH_FORMAT_JSON_MERGE_PATCH,
+                V1Patch.PATCH_FORMAT_STRATEGIC_MERGE_PATCH,
                 patch
         );
+
+        log.info("update image binding result: {}", result.isSuccess());
     }
 
 }

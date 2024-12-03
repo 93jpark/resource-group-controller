@@ -181,7 +181,7 @@ spec:
       additionalPrinterColumns:
         - name: AIPUB-IMAGE-NAMESPACES
           type: string
-          jsonPath: .spec.aipubImageNamespaces[*]
+          jsonPath: .spec.aipubImageNamespaces
         - name: SECRET-REF
           type: string
           jsonPath: .spec.secret.name

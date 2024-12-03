@@ -9,7 +9,6 @@ import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1Node;
 import io.kubernetes.client.util.generic.GenericKubernetesApi;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
-import io.ten1010.aipub.projectcontroller.controller.cluster.NodeGroupPolicy;
 import io.ten1010.aipub.projectcontroller.core.KeyUtil;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroup;
 import io.ten1010.aipub.projectcontroller.model.V1alpha1NodeGroupList;

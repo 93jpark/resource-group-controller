@@ -1,19 +1,15 @@
 package io.ten1010.aipub.projectcontroller.controller.cluster.project;
 
-import com.google.gson.JsonObject;
-import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.extended.controller.reconciler.Reconciler;
 import io.kubernetes.client.extended.controller.reconciler.Request;
 import io.kubernetes.client.extended.controller.reconciler.Result;
 import io.kubernetes.client.extended.event.EventType;
 import io.kubernetes.client.extended.event.legacy.EventRecorder;
 import io.kubernetes.client.informer.cache.Indexer;
+import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.models.V1Namespace;
-import io.kubernetes.client.openapi.models.V1ObjectMeta;
-import io.kubernetes.client.proto.Meta;
 import io.kubernetes.client.util.generic.GenericKubernetesApi;
 import io.kubernetes.client.util.generic.KubernetesApiResponse;
-import io.kubernetes.client.util.generic.options.UpdateOptions;
 import io.ten1010.aipub.projectcontroller.controller.KubernetesApiReconcileExceptionHandlingTemplate;
 import io.ten1010.aipub.projectcontroller.core.Events;
 import io.ten1010.aipub.projectcontroller.core.K8sObjectUtil;
@@ -23,7 +19,6 @@ import io.ten1010.aipub.projectcontroller.model.V1alpha1ProjectList;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -84,10 +79,14 @@ public class ProjectReconciler implements Reconciler {
                             log.debug("Deleted Project [{}] due to namespace conflict", K8sObjectUtil.getName(project));
                             return new Result(true, INVALID_STATE_REQUEUE_DURATION);
                         }
-                        updateProject(project, K8sObjectUtil.getName(project));
+                        try {
+                            updateProject(project, K8sObjectUtil.getName(project));
+                        } catch (Exception e) {
+                            log.error(e.getMessage());
+                        }
+
                         log.info("Updated Project [{}] namespace", K8sObjectUtil.getName(project));
                     }
-
                     return new Result(false);
                 }, request);
     }
@@ -96,18 +95,17 @@ public class ProjectReconciler implements Reconciler {
         this.projectApi.delete(name);
     }
 
-    private void updateProject(V1alpha1Project project, String namespace) {
-        JsonObject patchBody = new JsonObject();
-        patchBody.add("spec", new JsonObject());
-        patchBody.getAsJsonObject("spec").addProperty("namespace", namespace);
-
-        V1Patch patch = new V1Patch(patchBody.toString());
-
-        this.projectApi.patch(
-                K8sObjectUtil.getName(project),
-                V1Patch.PATCH_FORMAT_JSON_MERGE_PATCH,
-                patch
-        );
+    private void updateProject(V1alpha1Project project, String namespace) throws ApiException {
+        KubernetesApiResponse<V1alpha1Project> response = this.projectApi.get(K8sObjectUtil.getName(project));
+        V1alpha1Project latestProject = response.getObject();
+        latestProject.setNamespace(namespace);
+        KubernetesApiResponse<V1alpha1Project> updateResult = this.projectApi.update(latestProject);
+        if (updateResult.isSuccess()) {
+            log.info("update success with {} code", updateResult.getStatus().getCode());
+        } else {
+            log.info("update failed due to reason {}", updateResult.getStatus().getReason());
+            log.info("update failed due to details {}", updateResult.getStatus().getDetails());
+        }
     }
 
 }

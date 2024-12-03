@@ -1,14 +1,19 @@
-FROM eclipse-temurin:17 AS builder
-COPY . /tmp
-WORKDIR /tmp
+# Stage 1: Build stage
+FROM --platform=$BUILDPLATFORM eclipse-temurin:17 AS builder
+WORKDIR /build
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
 RUN chmod 700 ./mvnw
-RUN ./mvnw clean package
-RUN java -Djarmode=layertools -jar target/project-controller.jar extract
+# Download dependencies first (cached layer)
+RUN ./mvnw dependency:go-offline
 
-FROM gcr.io/distroless/java:17
-COPY --from=builder /tmp/dependencies/ /app
-COPY --from=builder /tmp/snapshot-dependencies/ /app
-COPY --from=builder /tmp/spring-boot-loader/ /app
-COPY --from=builder /tmp/application/ /app
+# Copy source and build
+COPY src ./src/
+RUN ./mvnw clean package -DskipTests
+
+# Stage 2: Production stage
+FROM --platform=$TARGETPLATFORM gcr.io/distroless/java17-debian12:latest
 WORKDIR /app
-ENTRYPOINT ["java", "org.springframework.boot.loader.JarLauncher"]
+# Copy only the built jar from builder stage
+COPY --from=builder /build/target/project-controller.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
