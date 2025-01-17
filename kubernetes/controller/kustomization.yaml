@@ -4,6 +4,14 @@ configMapGenerator:
     literals:
       - TZ=Asia/Seoul
       - SERVER_SSL_KEY_STORE=/etc/project-controller/tls/tls.p12
+      - APP_AIPUB_ENABLED=true
+      - APP_AIPUB_SERVER_URL=https://k10s.cluster9.idc1.ten1010.io
+      - APP_AIPUB_VERIFYING-SSL=false
+      - APP_AIPUB_USERNAME=testuser
+      - APP_AIPUB_PASSWORD=asdasdasd
+      - APP_K8S_VERIFY_SSL=true
+      - APP_K8S_KUBE_CONFIG_MODE=in_cluster
+
 secretGenerator:
   - name: project-controller-envs
     literals:

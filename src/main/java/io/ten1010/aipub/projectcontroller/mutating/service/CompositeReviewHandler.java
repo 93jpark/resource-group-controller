@@ -2,10 +2,12 @@ package io.ten1010.aipub.projectcontroller.mutating.service;
 
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReview;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @AllArgsConstructor
 public class CompositeReviewHandler implements ReviewHandler {
 
@@ -24,7 +26,9 @@ public class CompositeReviewHandler implements ReviewHandler {
 
     private Optional<ReviewHandler> getHandler(V1AdmissionReview review) {
         for (ReviewHandler handler : this.handlers) {
+            log.info("getHandler: {}", handler.getClass().toGenericString());
             if (handler.canHandle(review)) {
+                log.info("getHandler: found handler {}", handler.getClass().toGenericString());
                 return Optional.of(handler);
             }
         }

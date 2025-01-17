@@ -2,19 +2,21 @@ apiVersion: project.aipub.ten1010.io/v1alpha1
 kind: Project
 metadata:
   name: proj1
-spec:
-  members:
-    - aipubUser: au1
+spec: # 유저가 원하는 상태
+  members: #k8s 기반 사용자
+    - aipubUser: au1 # AI-Pub 유저의 username
       role: project-admin
     - aipubUser: au2
       role: project-developer
   quota:
-    pvcStorage: 500Gi
-  binding:
+    pvcStorage: 500Gi # 해당 ns에 pvcQuota를 설정한다는 의미임
+  binding: # 바인딩되는 노드는 nodes와 nodeGroups의 노드 합집합
     nodes:
-      - node1
+      - node1 # 해당 ns에 바인딩할 노드
     nodeGroups:
-      - ng1
+      - ng1 # 해당 ns에 바인딩할 노드그룹
     imageNamespaces:
       - img-ns1
 ---
+
+#status는 실제 상태

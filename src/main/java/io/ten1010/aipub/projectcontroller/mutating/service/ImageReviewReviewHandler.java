@@ -19,6 +19,7 @@ import io.ten1010.common.jsonpatch.JsonPatchBuilder;
 import io.ten1010.common.jsonpatch.JsonPatchOperationBuilder;
 import io.ten1010.common.jsonpatch.dto.JsonPatch;
 import io.ten1010.common.jsonpatch.dto.JsonPatchOperation;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+@Slf4j
 public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1ImageReview> {
 
     private final static V1OwnerReference DUMMY_REF = new V1OwnerReferenceBuilder()
@@ -57,34 +59,51 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
 
     @Override
     public void handle(V1AdmissionReview review) {
+        log.info("entered Image Review Handler");
+        log.info("AdmissionReview: {}", review);
         V1alpha1ImageReview imageReview = getObject(review);
+        log.info("v1alpha1ImageReview: {}", imageReview);
         Optional<String> imgNsOpt = ImageReviewUtils.getImgNS(imageReview);
+        log.info("is imgNS present: {}", imgNsOpt.isPresent());
         if (imgNsOpt.isEmpty()) {
+            log.info("imgNS is empty");
             V1AdmissionReviewUtils.reject(review, HttpStatus.BAD_REQUEST.value(), "imgNS required");
             return;
         }
         String targetImgNS = imgNsOpt.get();
         Optional<String> repoOpt = ImageReviewUtils.getRepo(imageReview);
-
+        log.info("targetImgNS: {}, repo: {}", targetImgNS, repoOpt.orElse(null));
+        // aipub member가 아니면 거절
         if (denyIfUnauthorized(review, targetImgNS)) {
             return;
         }
 
+        // master, aipub admin이면 허가
         doService(review, targetImgNS, repoOpt.orElse(null));
     }
 
     private boolean denyIfUnauthorized(V1AdmissionReview review, String targetImgNS) {
+        log.info("entered deny if unauthorized");
         Objects.requireNonNull(review.getRequest());
         Objects.requireNonNull(review.getRequest().getUserInfo());
-
+        log.info("userInfo {}", review.getRequest().getUserInfo());
         UserInfoAnalysis analysis = this.userInfoAnalyzer.analyze(review.getRequest().getUserInfo());
+        log.info("analysis {}", analysis);
         if (analysis.isMaster()) {
+            log.info("is master: true");
+            return false;
+        }
+        if (analysis.isServiceAccount()) {
+            log.info("is service account: true");
+            log.info("{}", review.getRequest().getUserInfo());
             return false;
         }
         if (analysis.isAipubAdmin()) {
+            log.info("is aipub admin: true");
             return false;
         }
         if (!analysis.isAipubMember()) {
+            log.info("is aipub member: false");
             V1AdmissionReviewUtils.reject(review, HttpStatus.FORBIDDEN.value(), "Not aipub member");
             return true;
         }

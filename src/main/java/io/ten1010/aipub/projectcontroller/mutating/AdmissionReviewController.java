@@ -15,6 +15,7 @@ import io.ten1010.common.eh.web.WebResponse;
 import io.ten1010.common.eh.web.spring.SpringWebExceptionHandlerAdapter;
 import io.ten1010.common.eh.web.spring.SpringWebExceptionsWebMetadataRegistrar;
 import io.ten1010.common.eh.web.spring.SpringWebResponseConverter;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +25,7 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 
 import static io.ten1010.aipub.projectcontroller.mutating.AdmissionReviewController.PATH;
 
+@Slf4j
 @RestController
 @RequestMapping(PATH)
 public class AdmissionReviewController {
@@ -66,8 +68,9 @@ public class AdmissionReviewController {
 
     @PostMapping(value = "", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<V1AdmissionReview> create(@RequestBody V1AdmissionReview review) {
+        log.info("controller received AdmissionReview: {}", review);
         V1AdmissionReview clone = V1AdmissionReviewUtils.clone(review);
-
+        log.info("controller cloned AdmissionReview: {}", clone);
         this.reviewService.review(clone);
 
         return ResponseEntity.ok(clone);
@@ -77,7 +80,7 @@ public class AdmissionReviewController {
     public ResponseEntity<Object> handle(WebRequest request, Exception exception) {
         try {
             V1AdmissionReview review = getV1AdmissionReview(request);
-            AdmissionReviewException reviewException = new AdmissionReviewException(exception, review);
+            AdmissionReviewException reviewException = new AdmissionReviewException(exception, review); // NPE 터지는 곳
             return this.exceptionHandler.handle(request, reviewException);
         } catch (Exception ignored) {
             return this.exceptionHandler.handle(request, exception);

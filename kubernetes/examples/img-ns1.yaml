@@ -3,5 +3,5 @@ kind: ImageNamespace
 metadata:
   name: img-ns1
 spec:
-  id: "1"
+  id: "1" # aipub backend에서 image ns 생성 시, 이에 해당하는 k8s ImageNamespace가 생성됨
 ---
