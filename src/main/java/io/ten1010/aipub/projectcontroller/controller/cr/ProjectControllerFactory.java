@@ -97,7 +97,8 @@ public class ProjectControllerFactory implements ControllerFactory {
 
     private ControllerWatch<V1alpha1ImageNamespace> createImageNamespaceWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1ImageNamespace> watch = new DefaultControllerWatch<>(workQueue, V1alpha1ImageNamespace.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysFalseFilter());
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.alwaysFalseFilter()); // todo 여기서 왜 false? false이면 뭐고 true이면 뭐지?
+        // eventHandler에서 false이면 request를 queue에 넣지않는것아닌가?
         watch.setRequestBuilder(this.requestBuilderFactory.imageNamespaceToBoundProjects());
         return watch;
     }

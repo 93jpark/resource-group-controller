@@ -14,6 +14,11 @@ import java.util.function.BiPredicate;
 
 public class OnUpdateFilterFactory {
 
+    /**
+     * 항상 true 리턴
+     * @return
+     * @param <T>
+     */
     public <T extends KubernetesObject> BiPredicate<T, T> alwaysTrueFilter() {
         return (oldObj, newObj) -> true;
     }
@@ -22,38 +27,75 @@ public class OnUpdateFilterFactory {
         return (oldObj, newObj) -> true;
     }
 
+    /**
+     * OwnerReference가 다른 경우 true
+     * @return
+     * @param <T>
+     */
     public <T extends KubernetesObject> BiPredicate<T, T> ownerReferencesFilter() {
         return (oldObj, newObj) -> !K8sObjectUtils.getOwnerReferences(oldObj).equals(K8sObjectUtils.getOwnerReferences(newObj));
     }
 
+    /**
+     * project의 spec이 다른 경우 true. 즉, 사용자가 project에 대한 정보를 변경한 경우.
+     * @return
+     */
     public BiPredicate<V1alpha1Project, V1alpha1Project> projectSpecFieldFilter() {
         return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }
 
+    /**
+     * project의 quota 다른 경우 true. 즉, project의 상태가 변경된 경우.
+     * @return
+     */
     public BiPredicate<V1alpha1Project, V1alpha1Project> projectSpecQuotaFieldFilter() {
         return (oldObj, newObj) -> !ProjectUtils.getSpecQuota(oldObj).equals(ProjectUtils.getSpecQuota(newObj));
     }
 
+    /**
+     * project의 binding(node, imageNs, nodeGroup)이 변경된 경우
+     * @return
+     */
     public BiPredicate<V1alpha1Project, V1alpha1Project> projectSpecBindingFieldFilter() {
         return (oldObj, newObj) -> !ProjectUtils.getSpecBinding(oldObj).equals(ProjectUtils.getSpecBinding(newObj));
     }
 
+    /**
+     * bound된 AipubUser가 변경된 경우
+     * @return
+     */
     public BiPredicate<V1alpha1Project, V1alpha1Project> projectStatusAllBoundAipubUsersFieldFilter() {
         return (oldObj, newObj) -> !ProjectUtils.getStatusAllBoundAipubUsers(oldObj).equals(ProjectUtils.getStatusAllBoundAipubUsers(newObj));
     }
 
+    /**
+     * bound된 ImageNamespace가 변경된 경우
+     * @return
+     */
     public BiPredicate<V1alpha1Project, V1alpha1Project> projectStatusAllBoundImageNamespacesFieldFilter() {
         return (oldObj, newObj) -> !ProjectUtils.getStatusAllBoundImageNamespaces(oldObj).equals(ProjectUtils.getStatusAllBoundImageNamespaces(newObj));
     }
 
+    /**
+     * AipubUser의 spec이 변경된 경우. AipubUserSpec은 id임
+     * @return
+     */
     public BiPredicate<V1alpha1AipubUser, V1alpha1AipubUser> aipubUserSpecFieldFilter() {
         return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }
 
+    /**
+     * nodeGroup의 spec(policy, nodes, 등)이 변경된 경우
+     * @return
+     */
     public BiPredicate<V1alpha1NodeGroup, V1alpha1NodeGroup> nodeGroupSpecFieldFilter() {
         return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }
 
+    /**
+     * imageNamespace id가 변경된 경우
+     * @return
+     */
     public BiPredicate<V1alpha1ImageNamespace, V1alpha1ImageNamespace> imageNamespaceSpecFieldFilter() {
         return (oldObj, newObj) -> !Objects.equals(oldObj.getSpec(), newObj.getSpec());
     }

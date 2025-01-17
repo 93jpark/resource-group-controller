@@ -54,8 +54,10 @@ public class RoleBindingReconciler extends ReconcilerSupport {
         String projName = projNameOpt.get().getProjectName();
         ProjectRoleEnum projRoleEnum = projNameOpt.get().getProjectRoleEnum();
 
+        // project.aipub.ten1010.io:project-admin:proj1
         String roleBindingKey = new RequestHelper(this.keyResolver).resolveKey(request);
         Optional<V1RoleBinding> roleBindingOpt = Optional.ofNullable(this.RoleBindingIndexer.getByKey(roleBindingKey));
+        // project에 해당하는 rolebinding 가져옴
         String projKey = this.keyResolver.resolveKey(projName);
         Optional<V1alpha1Project> projectOpt = Optional.ofNullable(this.projectIndexer.getByKey(projKey));
 
@@ -70,6 +72,7 @@ public class RoleBindingReconciler extends ReconcilerSupport {
 
         List<V1OwnerReference> reconciledReferences = this.reconciliationService.reconcileOwnerReferences(roleBindingOpt.orElse(null), projectOpt.get());
         V1RoleRef reconciledRoleRef = this.reconciliationService.reconcileRoleRef(projectOpt.get(), projRoleEnum);
+        // proejct의 spec에 정의된 member들 가져옴
         List<RbacV1Subject> subjects = this.reconciliationService.reconcileSubjects(projectOpt.get(), projRoleEnum);
 
         if (roleBindingOpt.isPresent()) {
@@ -94,7 +97,7 @@ public class RoleBindingReconciler extends ReconcilerSupport {
             List<RbacV1Subject> subjects) throws ApiException {
         V1RoleBinding roleBinding = new V1RoleBindingBuilder()
                 .withNewMetadata()
-                .withName(objName)
+                .withName(objName) // rolebinding 형식의 이름으로 생성함
                 .withOwnerReferences(reconciledReferences)
                 .endMetadata()
                 .withRoleRef(reconciledRoleRef)

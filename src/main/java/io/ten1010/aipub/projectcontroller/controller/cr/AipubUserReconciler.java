@@ -53,9 +53,10 @@ public class AipubUserReconciler extends ReconcilerSupport {
         }
         V1alpha1AipubUser user = userOpt.get();
 
-        List<V1alpha1Project> boundProjects = this.boundObjectResolver.getAllBoundProjects(user);
-        List<V1alpha1ImageNamespace> boundImageNamespaces = this.boundObjectResolver.getAllBoundImageNamespaces(user);
+        List<V1alpha1Project> boundProjects = this.boundObjectResolver.getAllBoundProjects(user); // 모든 소속된 Project
+        List<V1alpha1ImageNamespace> boundImageNamespaces = this.boundObjectResolver.getAllBoundImageNamespaces(user); // 모든 연관된 ImageNS
         V1alpha1AipubUserStatus reconciledStatus = this.reconciliationService.reconcileAipubUserStatus(user, boundProjects, boundImageNamespaces);
+        // AipubUserStatus -> aipubUser의 연관된 project, imageNS 정보를 담는 객체
 
         return reconcileExistingAipubUser(userOpt.get(), reconciledStatus);
     }
@@ -77,6 +78,7 @@ public class AipubUserReconciler extends ReconcilerSupport {
 
     private void updateStatus(V1alpha1AipubUser aipubUser) throws ApiException {
         Objects.requireNonNull(aipubUser.getStatus());
+        // statusPatchHelper에서 patch api 호출함
         this.statusPatchHelper.patchStatus(null, K8sObjectUtils.getName(aipubUser), aipubUser.getStatus());
     }
 

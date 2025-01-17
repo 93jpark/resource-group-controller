@@ -6,10 +6,10 @@ spec:
   policy:
     daemonSet:
       allowAllDaemonSets: false
-      allowedNamespaces: [ ]
-      allowedDaemonSets: [ ]
+      allowedNamespaces: []
+      allowedDaemonSets: []
   enableNodeSelector: false
-  nodeSelector: { }
+  nodeSelector: {} # node의 label을 통해서 nodeGroup에 포함시키도록 함
   nodes:
     - node2
 ---

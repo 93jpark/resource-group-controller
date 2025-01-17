@@ -78,10 +78,13 @@ public class RequestBuilderFactory {
     public Function<V1alpha1Project, List<Request>> projectToRoles(boolean namespacedRole) {
         return project -> {
             String projName = K8sObjectUtils.getName(project);
+            // project-admin
             String adminRole = this.roleNameResolver.resolveRoleName(projName, ProjectRoleEnum.PROJECT_ADMIN);
+            // project-developer
             String developerRole = this.roleNameResolver.resolveRoleName(projName, ProjectRoleEnum.PROJECT_DEVELOPER);
             if (namespacedRole) {
                 String namespace = this.namespaceNameResolver.resolveNamespaceName(projName);
+                // proj1
                 return List.of(new Request(namespace, adminRole), new Request(namespace, developerRole));
             }
             return List.of(new Request(adminRole), new Request(developerRole));

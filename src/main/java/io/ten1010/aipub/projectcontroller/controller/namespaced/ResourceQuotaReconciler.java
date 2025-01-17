@@ -118,6 +118,7 @@ public class ResourceQuotaReconciler extends ReconcilerSupport {
                 .endMetadata()
                 .withSpec(reconciledQuotaSpec)
                 .build();
+        // todo 테스트 필요
         updateQuota(K8sObjectUtils.getNamespace(quota), K8sObjectUtils.getName(quota), edited);
 
         return new Result(false);

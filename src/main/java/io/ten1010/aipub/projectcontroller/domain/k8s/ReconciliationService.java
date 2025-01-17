@@ -249,6 +249,7 @@ public class ReconciliationService {
         return reconciled;
     }
 
+    // project-admin은 project 수정 가능
     public List<V1PolicyRule> reconcileClusterRoleRules(
             V1alpha1Project project,
             ProjectRoleEnum projectRoleEnum,
@@ -269,6 +270,7 @@ public class ReconciliationService {
                     .build();
         };
 
+        // project-developer는 project 조회만 가능
         V1PolicyRule namespaceApiRule = switch (projectRoleEnum) {
             case PROJECT_ADMIN, PROJECT_DEVELOPER -> new V1PolicyRuleBuilder()
                     .withApiGroups("")
@@ -401,7 +403,7 @@ public class ReconciliationService {
         return ProjectUtils.getSpecMembers(project)
                 .stream()
                 .filter(e -> ProjectRoleEnum.memberHasRole(e, projRoleEnum))
-                .map(this.subjectResolver::resolve)
+                .map(this.subjectResolver::resolve) // member 이름 가져옴
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .toList();

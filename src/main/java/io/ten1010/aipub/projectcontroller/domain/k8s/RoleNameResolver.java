@@ -14,6 +14,7 @@ public class RoleNameResolver {
         if (projectName.contains(DELIMITER)) {
             throw new IllegalArgumentException();
         }
+        // project.aipub.ten1010.io:{role_name}:{project_name}
         return ProjectApiConstants.GROUP + DELIMITER + getProjectRoleString(projectRoleEnum) + DELIMITER + projectName;
     }
 
