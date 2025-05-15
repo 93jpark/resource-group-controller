@@ -91,12 +91,12 @@ public class AipubConfiguration {
     }
 
     @Bean
-    public Controller imageRegistryRobotController(SharedInformerFactory sharedInformerFactory) {
+    public Controller imageRegistryRobotController(SharedInformerFactory globalSharedInformerFactory) {
         if (this.aipubEnabled) {
             Objects.requireNonNull(this.aipubBackendClient);
             ImageRegistryRobotService robotService = new ImageRegistryRobotServiceImpl(this.aipubBackendClient);
             ImageRegistryRobotUsernameResolver usernameResolver = new ImageRegistryRobotUsernameResolverImpl();
-            return new ImageRegistryRobotControllerFactory(robotService, usernameResolver, sharedInformerFactory)
+            return new ImageRegistryRobotControllerFactory(robotService, usernameResolver, globalSharedInformerFactory)
                     .createController();
         }
         return new Controller() {

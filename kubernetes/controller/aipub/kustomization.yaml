@@ -1,0 +1,13 @@
+namespace: aipub
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: aipub-envs
+    literals:
+      - RESERVED_NAMESPACES="|-
+        - aipub
+        - k10s
+        - efk
+        - coaster
+resources:
+  - templates/namespace.yaml

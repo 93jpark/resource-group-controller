@@ -10,6 +10,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.SubjectResolver;
 import io.ten1010.aipub.projectcontroller.mutating.AdmissionReviewController;
 import io.ten1010.aipub.projectcontroller.mutating.RequestContentCachingFilter;
 import io.ten1010.aipub.projectcontroller.mutating.service.*;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,27 +36,38 @@ public class MutatingConfiguration {
 
     @Bean
     public PodReviewHandler podReviewHandler(
-            PodNodesResolver podNodesResolver, SharedInformerFactory sharedInformerFactory, ReconciliationService reconciliationService) {
-        return new PodReviewHandler(podNodesResolver, sharedInformerFactory, reconciliationService);
+            PodNodesResolver podNodesResolver, SharedInformerFactory globalSharedInformerFactory, ReconciliationService reconciliationService) {
+        return new PodReviewHandler(podNodesResolver, globalSharedInformerFactory, reconciliationService);
     }
 
     @Bean
     public DeploymentReviewHandler deploymentReviewHandler(
             WorkloadControllerNodesResolver workloadControllerNodesResolver,
-            SharedInformerFactory sharedInformerFactory,
+            SharedInformerFactory globalSharedInformerFactory,
             ReconciliationService reconciliationService) {
-        return new DeploymentReviewHandler(workloadControllerNodesResolver, sharedInformerFactory, reconciliationService);
+        return new DeploymentReviewHandler(workloadControllerNodesResolver, globalSharedInformerFactory, reconciliationService);
     }
 
     @Bean
-    public ProjectReviewHandler projectReviewHandler(SubjectResolver subjectResolver, SharedInformerFactory sharedInformerFactory) {
-        return new ProjectReviewHandler(subjectResolver, sharedInformerFactory);
+    public NamespaceReviewHandler namespaceReviewHandler(
+            SubjectResolver subjectResolver,
+            @Qualifier("globalSharedInformerFactory") SharedInformerFactory globalSharedInformerFactory,
+            @Qualifier("aipubSharedInformerFactory") SharedInformerFactory aipubSharedIndexerFactory) {
+        return new NamespaceReviewHandler(subjectResolver, globalSharedInformerFactory, aipubSharedIndexerFactory);
+    }
+
+    @Bean
+    public ProjectReviewHandler projectReviewHandler(
+            SubjectResolver subjectResolver,
+            @Qualifier("globalSharedInformerFactory") SharedInformerFactory globalSharedInformerFactory,
+            @Qualifier("aipubSharedInformerFactory") SharedInformerFactory aipubSharedIndexerFactory) {
+        return new ProjectReviewHandler(subjectResolver, globalSharedInformerFactory, aipubSharedIndexerFactory);
     }
 
     @Bean
     public ImageReviewReviewHandler imageReviewReviewHandler(
-            RepositoryService repositoryService, ArtifactService artifactService, SharedInformerFactory sharedInformerFactory) {
-        return new ImageReviewReviewHandler(repositoryService, artifactService, sharedInformerFactory);
+            RepositoryService repositoryService, ArtifactService artifactService, SharedInformerFactory globalSharedInformerFactory) {
+        return new ImageReviewReviewHandler(repositoryService, artifactService, globalSharedInformerFactory);
     }
 
 }
