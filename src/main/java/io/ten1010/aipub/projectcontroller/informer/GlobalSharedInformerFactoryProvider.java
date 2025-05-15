@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class SharedInformerFactoryProvider {
+public class GlobalSharedInformerFactoryProvider {
 
     private static final long DEFAULT_RESYNC_PERIOD = 0;
 
@@ -24,7 +24,7 @@ public class SharedInformerFactoryProvider {
     private final K8sApiProvider k8sApiProvider;
     private final List<InformerRegistrar> registrars;
 
-    public SharedInformerFactoryProvider(K8sApiProvider k8sApiProvider, List<InformerRegistrar> registrars) {
+    public GlobalSharedInformerFactoryProvider(K8sApiProvider k8sApiProvider, List<InformerRegistrar> registrars) {
         this.keyResolver = new KeyResolver();
         this.k8sApiProvider = k8sApiProvider;
         this.registrars = registrars;
@@ -47,6 +47,7 @@ public class SharedInformerFactoryProvider {
         registerResourceQuotaInformer(informerFactory);
         registerSecretInformer(informerFactory);
         registerPodInformer(informerFactory);
+        registerConfigMapInformer(informerFactory);
         this.registrars.forEach(e -> e.registerInformer(informerFactory));
 
         return informerFactory;
@@ -223,6 +224,18 @@ public class SharedInformerFactoryProvider {
                         .buildCall(null),
                 V1ResourceQuota.class,
                 V1ResourceQuotaList.class);
+    }
+
+    private void registerConfigMapInformer(SharedInformerFactory informerFactory) {
+        ApiClient apiClient = this.k8sApiProvider.getApiClient();
+        informerFactory.sharedIndexInformerFor(
+                (CallGeneratorParams params) -> new CoreV1Api(apiClient).listConfigMapForAllNamespaces()
+                        .resourceVersion(params.resourceVersion)
+                        .watch(params.watch)
+                        .timeoutSeconds(params.timeoutSeconds)
+                        .buildCall(null),
+                V1ConfigMap.class,
+                V1ConfigMapList.class);
     }
 
     private void registerSecretInformer(SharedInformerFactory informerFactory) {

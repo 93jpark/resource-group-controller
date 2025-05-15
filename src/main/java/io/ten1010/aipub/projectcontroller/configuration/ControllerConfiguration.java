@@ -38,9 +38,9 @@ public class ControllerConfiguration {
 
     @Bean
     public ControllerManager controllerManager(
-            SharedInformerFactory sharedInformerFactory, List<Controller> controllers, List<WorkloadControllerFactory<?>> workloadControllerFactories) {
+            SharedInformerFactory globalSharedInformerFactory, List<Controller> controllers, List<WorkloadControllerFactory<?>> workloadControllerFactories) {
         System.out.println(controllers);
-        ControllerManagerBuilder builder = ControllerBuilder.controllerManagerBuilder(sharedInformerFactory);
+        ControllerManagerBuilder builder = ControllerBuilder.controllerManagerBuilder(globalSharedInformerFactory);
         controllers.forEach(builder::addController);
         workloadControllerFactories.forEach(f -> builder.addController(f.createController()));
         ControllerManager controllerManager = builder.build();
@@ -52,133 +52,133 @@ public class ControllerConfiguration {
     }
 
     @Bean
-    public Controller projectController(SharedInformerFactory sharedInformerFactory,
+    public Controller projectController(SharedInformerFactory globalSharedInformerFactory,
                                         K8sApiProvider k8sApiProvider,
                                         ReconciliationService reconciliationService) {
-        return new ProjectControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new ProjectControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller aipubUserController(SharedInformerFactory sharedInformerFactory,
+    public Controller aipubUserController(SharedInformerFactory globalSharedInformerFactory,
                                           K8sApiProvider k8sApiProvider,
                                           ReconciliationService reconciliationService) {
-        return new AipubUserControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new AipubUserControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller aipubUserClusterRoleController(SharedInformerFactory sharedInformerFactory,
+    public Controller aipubUserClusterRoleController(SharedInformerFactory globalSharedInformerFactory,
                                                      K8sApiProvider k8sApiProvider,
                                                      ReconciliationService reconciliationService) {
-        return new AipubUserClusterRoleControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new AipubUserClusterRoleControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller aipubUserClusterRoleBindingController(SharedInformerFactory sharedInformerFactory,
+    public Controller aipubUserClusterRoleBindingController(SharedInformerFactory globalSharedInformerFactory,
                                                             K8sApiProvider k8sApiProvider,
                                                             ReconciliationService reconciliationService) {
-        return new AipubUserClusterRoleBindingControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new AipubUserClusterRoleBindingControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller aodeGroupController(SharedInformerFactory sharedInformerFactory,
+    public Controller aodeGroupController(SharedInformerFactory globalSharedInformerFactory,
                                           K8sApiProvider k8sApiProvider,
                                           ReconciliationService reconciliationService) {
-        return new NodeGroupControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new NodeGroupControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller imageNamespaceController(SharedInformerFactory sharedInformerFactory,
+    public Controller imageNamespaceController(SharedInformerFactory globalSharedInformerFactory,
                                                K8sApiProvider k8sApiProvider,
                                                ReconciliationService reconciliationService) {
-        return new ImageNamespaceControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new ImageNamespaceControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller namespaceController(SharedInformerFactory sharedInformerFactory,
+    public Controller namespaceController(SharedInformerFactory globalSharedInformerFactory,
                                           K8sApiProvider k8sApiProvider,
                                           ReconciliationService reconciliationService) {
-        return new NamespaceControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new NamespaceControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller nodeController(SharedInformerFactory sharedInformerFactory,
+    public Controller nodeController(SharedInformerFactory globalSharedInformerFactory,
                                      K8sApiProvider k8sApiProvider,
                                      ReconciliationService reconciliationService) {
-        return new NodeControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new NodeControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller clusterRoleController(SharedInformerFactory sharedInformerFactory,
+    public Controller clusterRoleController(SharedInformerFactory globalSharedInformerFactory,
                                             K8sApiProvider k8sApiProvider,
                                             ReconciliationService reconciliationService) {
-        return new ClusterRoleControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new ClusterRoleControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller clusterRoleBindingController(SharedInformerFactory sharedInformerFactory,
+    public Controller clusterRoleBindingController(SharedInformerFactory globalSharedInformerFactory,
                                                    K8sApiProvider k8sApiProvider,
                                                    ReconciliationService reconciliationService) {
-        return new ClusterRoleBindingControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new ClusterRoleBindingControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller roleController(SharedInformerFactory sharedInformerFactory,
+    public Controller roleController(SharedInformerFactory globalSharedInformerFactory,
                                      K8sApiProvider k8sApiProvider,
                                      ReconciliationService reconciliationService) {
-        return new RoleControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new RoleControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller roleBindingController(SharedInformerFactory sharedInformerFactory,
+    public Controller roleBindingController(SharedInformerFactory globalSharedInformerFactory,
                                             K8sApiProvider k8sApiProvider,
                                             ReconciliationService reconciliationService) {
-        return new RoleBindingControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new RoleBindingControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller resourceQuotaController(SharedInformerFactory sharedInformerFactory,
+    public Controller resourceQuotaController(SharedInformerFactory globalSharedInformerFactory,
                                               K8sApiProvider k8sApiProvider,
                                               ReconciliationService reconciliationService) {
-        return new ResourceQuotaControllerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new ResourceQuotaControllerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller imagePullSecretReconcilerFactory(SharedInformerFactory sharedInformerFactory,
+    public Controller imagePullSecretReconcilerFactory(SharedInformerFactory globalSharedInformerFactory,
                                                        K8sApiProvider k8sApiProvider,
                                                        ReconciliationService reconciliationService) {
-        return new ImagePullSecretReconcilerFactory(sharedInformerFactory, k8sApiProvider, reconciliationService)
+        return new ImagePullSecretReconcilerFactory(globalSharedInformerFactory, k8sApiProvider, reconciliationService)
                 .createController();
     }
 
     @Bean
-    public Controller podController(SharedInformerFactory sharedInformerFactory,
+    public Controller podController(SharedInformerFactory globalSharedInformerFactory,
                                     K8sApiProvider k8sApiProvider,
                                     PodNodesResolver podNodesResolver) {
-        return new PodControllerFactory(sharedInformerFactory, k8sApiProvider, podNodesResolver)
+        return new PodControllerFactory(globalSharedInformerFactory, k8sApiProvider, podNodesResolver)
                 .createController();
     }
 
     @Bean
     public RootWorkloadControllerResolver rootControllerResolver(
-            SharedInformerFactory sharedInformerFactory,
+            SharedInformerFactory globalSharedInformerFactory,
             List<WorkloadControllerFactory<?>> workloadControllerFactories) {
         List<? extends K8sObjectType<?>> supportedTypes = workloadControllerFactories.stream()
                 .map(WorkloadControllerFactory::getObjectType)
                 .toList();
-        return new RootWorkloadControllerResolver(supportedTypes, sharedInformerFactory);
+        return new RootWorkloadControllerResolver(supportedTypes, globalSharedInformerFactory);
     }
 
     @Bean
@@ -194,8 +194,8 @@ public class ControllerConfiguration {
     public PodNodesResolver podNodesResolver(
             RootWorkloadControllerResolver rootWorkloadControllerResolver,
             CompositeWorkloadControllerNodesResolver workloadControllerNodesResolver,
-            SharedInformerFactory sharedInformerFactory) {
-        return new PodNodesResolver(rootWorkloadControllerResolver, workloadControllerNodesResolver, sharedInformerFactory);
+            SharedInformerFactory globalSharedInformerFactory) {
+        return new PodNodesResolver(rootWorkloadControllerResolver, workloadControllerNodesResolver, globalSharedInformerFactory);
     }
 
     @Bean
@@ -205,10 +205,10 @@ public class ControllerConfiguration {
 
     @Bean
     public CronJobWorkloadControllerFactory cronJobWorkloadControllerFactory(
-            SharedInformerFactory sharedInformerFactory,
+            SharedInformerFactory globalSharedInformerFactory,
             ReconciliationService reconciliationService,
             K8sApiProvider k8sApiProvider) {
-        return new CronJobWorkloadControllerFactory(sharedInformerFactory, reconciliationService, k8sApiProvider);
+        return new CronJobWorkloadControllerFactory(globalSharedInformerFactory, reconciliationService, k8sApiProvider);
     }
 
     @Bean
@@ -218,10 +218,10 @@ public class ControllerConfiguration {
 
     @Bean
     public DaemonSetWorkloadControllerFactory daemonSetWorkloadControllerFactory(
-            SharedInformerFactory sharedInformerFactory,
+            SharedInformerFactory globalSharedInformerFactory,
             ReconciliationService reconciliationService,
             K8sApiProvider k8sApiProvider) {
-        return new DaemonSetWorkloadControllerFactory(sharedInformerFactory, reconciliationService, k8sApiProvider);
+        return new DaemonSetWorkloadControllerFactory(globalSharedInformerFactory, reconciliationService, k8sApiProvider);
     }
 
     @Bean
@@ -231,10 +231,10 @@ public class ControllerConfiguration {
 
     @Bean
     public DeploymentWorkloadControllerFactory deploymentWorkloadControllerFactory(
-            SharedInformerFactory sharedInformerFactory,
+            SharedInformerFactory globalSharedInformerFactory,
             ReconciliationService reconciliationService,
             K8sApiProvider k8sApiProvider) {
-        return new DeploymentWorkloadControllerFactory(sharedInformerFactory, reconciliationService, k8sApiProvider);
+        return new DeploymentWorkloadControllerFactory(globalSharedInformerFactory, reconciliationService, k8sApiProvider);
     }
 
     @Bean
@@ -244,10 +244,10 @@ public class ControllerConfiguration {
 
     @Bean
     public JobWorkloadControllerFactory jobWorkloadControllerFactory(
-            SharedInformerFactory sharedInformerFactory,
+            SharedInformerFactory globalSharedInformerFactory,
             ReconciliationService reconciliationService,
             K8sApiProvider k8sApiProvider) {
-        return new JobWorkloadControllerFactory(sharedInformerFactory, reconciliationService, k8sApiProvider);
+        return new JobWorkloadControllerFactory(globalSharedInformerFactory, reconciliationService, k8sApiProvider);
     }
 
     @Bean
@@ -257,10 +257,10 @@ public class ControllerConfiguration {
 
     @Bean
     public ReplicaSetWorkloadControllerFactory replicaSetWorkloadControllerFactory(
-            SharedInformerFactory sharedInformerFactory,
+            SharedInformerFactory globalSharedInformerFactory,
             ReconciliationService reconciliationService,
             K8sApiProvider k8sApiProvider) {
-        return new ReplicaSetWorkloadControllerFactory(sharedInformerFactory, reconciliationService, k8sApiProvider);
+        return new ReplicaSetWorkloadControllerFactory(globalSharedInformerFactory, reconciliationService, k8sApiProvider);
     }
 
     @Bean
@@ -270,10 +270,10 @@ public class ControllerConfiguration {
 
     @Bean
     public StatefulSetWorkloadControllerFactory statefulSetWorkloadControllerFactory(
-            SharedInformerFactory sharedInformerFactory,
+            SharedInformerFactory globalSharedInformerFactory,
             ReconciliationService reconciliationService,
             K8sApiProvider k8sApiProvider) {
-        return new StatefulSetWorkloadControllerFactory(sharedInformerFactory, reconciliationService, k8sApiProvider);
+        return new StatefulSetWorkloadControllerFactory(globalSharedInformerFactory, reconciliationService, k8sApiProvider);
     }
 
 }
