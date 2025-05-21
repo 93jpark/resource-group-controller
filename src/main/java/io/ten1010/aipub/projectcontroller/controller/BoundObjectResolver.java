@@ -7,9 +7,11 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.*;
 import io.ten1010.aipub.projectcontroller.informer.IndexerConstants;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
+@Slf4j
 public class BoundObjectResolver {
 
     private static <T> List<T> getIntersection(List<T> list1, List<T> list2) {
@@ -50,7 +52,28 @@ public class BoundObjectResolver {
     }
 
     public List<V1alpha1AipubUser> getAllBoundAipubUsers(V1alpha1Project project) {
-        return getDirectlyBoundAipubUsers(project);
+        List<V1alpha1AipubUser> directlySpecBoundUsers = getDirectlyBoundAipubUsers(project);
+        List<V1alpha1ProjectMember> specMembers = ProjectMemberUtils.getAipubUserMembers(project);
+
+        Map<String, List<String>> userIdsMap = new HashMap<>();
+        specMembers.forEach(member -> {
+            userIdsMap.computeIfAbsent(member.getAipubUser(), k -> new ArrayList<>()).add(member.getId());
+        });
+
+        List<V1alpha1AipubUser> boundUsers = directlySpecBoundUsers.stream().map(user -> {
+                    String name = K8sObjectUtils.getName(user);
+                    Optional<String> idOpt = AipubUserUtils.getSpecId(user);
+                    if (idOpt.isPresent()) {
+                        if (userIdsMap.containsKey(name)
+                                && (userIdsMap.get(name).contains(idOpt.get()) || userIdsMap.get(name).contains(null))) {
+                            return user;
+                        }
+                    }
+                    return null;
+                }).filter(Objects::nonNull)
+                .toList();
+
+        return boundUsers;
     }
 
     public List<V1alpha1NodeGroup> getAllBoundNodeGroups(V1alpha1Project project) {
@@ -58,6 +81,34 @@ public class BoundObjectResolver {
     }
 
     public List<V1alpha1ImageHub> getAllBoundImageHubs(V1alpha1Project project) {
+        List<V1alpha1ImageHub> hubs = getDirectlyBoundImageHubs(project);
+
+        List<V1alpha1ProjectImageHub> projectHubs = ProjectImageHubUtils.getProjectImageHubs(project);
+
+
+        List<V1alpha1AipubUser> directlySpecBoundUsers = getDirectlyBoundAipubUsers(project);
+        List<V1alpha1ProjectMember> specMembers = ProjectMemberUtils.getAipubUserMembers(project);
+
+        Map<String, List<String>> userIdsMap = new HashMap<>();
+        specMembers.forEach(member -> {
+            userIdsMap.computeIfAbsent(member.getAipubUser(), k -> new ArrayList<>()).add(member.getId());
+        });
+
+        List<V1alpha1AipubUser> boundUsers = directlySpecBoundUsers.stream().map(user -> {
+                    String name = K8sObjectUtils.getName(user);
+                    Optional<String> idOpt = AipubUserUtils.getSpecId(user);
+                    if (idOpt.isPresent()) {
+                        if (userIdsMap.containsKey(name)
+                                && (userIdsMap.get(name).contains(idOpt.get()) || userIdsMap.get(name).contains(null))) {
+                            return user;
+                        }
+                    }
+                    return null;
+                }).filter(Objects::nonNull)
+                .toList();
+
+
+
         return getDirectlyBoundImageHubs(project);
     }
 
@@ -80,6 +131,8 @@ public class BoundObjectResolver {
         return projects.stream()
                 .flatMap(e -> ProjectUtils.getSpecBindingImageHubs(e).stream())
                 .distinct()
+                .map(V1alpha1ProjectImageHub::getName)
+                .filter(Objects::nonNull)
                 .map(this.keyResolver::resolveKey)
                 .map(this.imageHubIndexer::getByKey)
                 .filter(Objects::nonNull)
@@ -172,6 +225,8 @@ public class BoundObjectResolver {
 
     private List<V1alpha1ImageHub> getDirectlyBoundImageHubs(V1alpha1Project project) {
         return ProjectUtils.getSpecBindingImageHubs(project).stream()
+                .map(V1alpha1ProjectImageHub::getName)
+                .filter(Objects::nonNull)
                 .map(this.keyResolver::resolveKey)
                 .map(this.imageHubIndexer::getByKey)
                 .filter(Objects::nonNull)

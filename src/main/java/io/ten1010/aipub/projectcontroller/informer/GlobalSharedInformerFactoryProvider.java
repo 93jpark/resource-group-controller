@@ -60,8 +60,8 @@ public class GlobalSharedInformerFactoryProvider {
                 DEFAULT_RESYNC_PERIOD);
         informer.addIndexers(Map.of(
                 IndexerConstants.AIPUB_USER_NAME_TO_PROJECTS_INDEXER_NAME,
-                project -> ProjectUtils.getSpecMembers(project).stream()
-                        .map(V1alpha1ProjectMember::getAipubUser)
+                project -> ProjectUtils.getStatusAllBoundAipubUsers(project).stream()
+//                        .map(V1alpha1ProjectMember::getAipubUser)
                         .filter(Objects::nonNull)
                         .toList()));
         informer.addIndexers(Map.of(
@@ -72,7 +72,9 @@ public class GlobalSharedInformerFactoryProvider {
                 ProjectUtils::getSpecBindingNodes));
         informer.addIndexers(Map.of(
                 IndexerConstants.IMAGE_HUB_NAME_TO_PROJECTS_INDEXER_NAME,
-                ProjectUtils::getSpecBindingImageHubs));
+                (project) -> ProjectUtils.getSpecBindingImageHubs(project).stream()
+                        .map(V1alpha1ProjectImageHub::getName)
+                        .toList()));
     }
 
     private void registerAipubUserInformer(SharedInformerFactory informerFactory) {
