@@ -11,7 +11,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.K8sObjectTypeConstants;
 import io.ten1010.aipub.projectcontroller.domain.k8s.KeyResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.*;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.AipubUserUtils;
-import io.ten1010.aipub.projectcontroller.domain.k8s.util.ImageNamespaceUtils;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.ImageHubUtils;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.ImageReviewUtils;
 import io.ten1010.aipub.projectcontroller.mutating.V1AdmissionReviewUtils;
 import io.ten1010.aipub.projectcontroller.mutating.dto.V1AdmissionReview;
@@ -40,7 +40,7 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
     private final RepositoryService repositoryService;
     private final ArtifactService artifactService;
     private final UserInfoAnalyzer userInfoAnalyzer;
-    private final Indexer<V1alpha1ImageNamespace> imageNamespaceIndexer;
+    private final Indexer<V1alpha1ImageHub> imageHubIndexer;
     private final KeyResolver keyResolver;
 
     public ImageReviewReviewHandler(
@@ -49,8 +49,8 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
         this.repositoryService = repositoryService;
         this.artifactService = artifactService;
         this.userInfoAnalyzer = new UserInfoAnalyzer(sharedInformerFactory);
-        this.imageNamespaceIndexer = sharedInformerFactory
-                .getExistingSharedIndexInformer(V1alpha1ImageNamespace.class)
+        this.imageHubIndexer = sharedInformerFactory
+                .getExistingSharedIndexInformer(V1alpha1ImageHub.class)
                 .getIndexer();
         this.keyResolver = new KeyResolver();
     }
@@ -89,9 +89,9 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
             return true;
         }
         V1alpha1AipubUser aipubUser = analysis.getAipubUser().orElseThrow();
-        List<String> boundImageNamespaces = AipubUserUtils.getAllBoundImageNamespaces(aipubUser);
-        if (boundImageNamespaces.stream().noneMatch(e -> e.equals(targetImgNS))) {
-            V1AdmissionReviewUtils.reject(review, HttpStatus.FORBIDDEN.value(), String.format("Aipub member not bound to ImageNamespace with name[%s]", targetImgNS));
+        List<String> boundImageHubs = AipubUserUtils.getAllBoundImageHubs(aipubUser);
+        if (boundImageHubs.stream().noneMatch(e -> e.equals(targetImgNS))) {
+            V1AdmissionReviewUtils.reject(review, HttpStatus.FORBIDDEN.value(), String.format("Aipub member not bound to ImageHub with name[%s]", targetImgNS));
             return true;
         }
 
@@ -99,16 +99,16 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
     }
 
     private void doService(V1AdmissionReview review, String targetImgNS, @Nullable String targetRepo) {
-        V1alpha1ImageNamespace imageNamespace = this.imageNamespaceIndexer.getByKey(this.keyResolver.resolveKey(targetImgNS));
-        if (imageNamespace == null) {
-            V1AdmissionReviewUtils.reject(review, HttpStatus.BAD_REQUEST.value(), String.format("ImageNamespace with name[%s] not found", targetImgNS));
+        V1alpha1ImageHub imageHub = this.imageHubIndexer.getByKey(this.keyResolver.resolveKey(targetImgNS));
+        if (imageHub == null) {
+            V1AdmissionReviewUtils.reject(review, HttpStatus.BAD_REQUEST.value(), String.format("ImageHub with name[%s] not found", targetImgNS));
             return;
         }
 
         V1alpha1ImageReviewStatus status = new V1alpha1ImageReviewStatus();
         if (targetRepo == null) {
             List<Repository> repositories = this.repositoryService.listNamespacedRepositories(
-                    ImageNamespaceUtils.getSpecId(imageNamespace), new RepositoryListOptions());
+                    ImageHubUtils.getSpecId(imageHub), new RepositoryListOptions());
             List<V1alpha1ReviewRepository> reviewRepositories = repositories.stream()
                     .map(e -> {
                         V1alpha1ReviewRepository repository = new V1alpha1ReviewRepository();
@@ -120,7 +120,7 @@ public class ImageReviewReviewHandler extends AbstractReviewHandler<V1alpha1Imag
             status.setArtifacts(null);
         } else {
             List<Artifact> artifacts = this.artifactService.listArtifacts(
-                    ImageNamespaceUtils.getSpecId(imageNamespace), targetRepo, new ArtifactListOptions());
+                    ImageHubUtils.getSpecId(imageHub), targetRepo, new ArtifactListOptions());
             List<V1alpha1ReviewArtifact> reviewArtifacts = artifacts.stream()
                     .map(artifact -> {
                         List<String> tags;

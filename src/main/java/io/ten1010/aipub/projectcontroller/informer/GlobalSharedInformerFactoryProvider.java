@@ -35,7 +35,7 @@ public class GlobalSharedInformerFactoryProvider {
         registerProjectInformer(informerFactory);
         registerAipubUserInformer(informerFactory);
         registerNodeGroupInformer(informerFactory);
-        registerImageNamespaceInformer(informerFactory);
+        registerImageHubInformer(informerFactory);
         registerResourceSetInformer(informerFactory);
         registerNodeResourceStatusInformer(informerFactory);
         registerNamespaceInformer(informerFactory);
@@ -71,8 +71,8 @@ public class GlobalSharedInformerFactoryProvider {
                 IndexerConstants.NODE_NAME_TO_PROJECTS_INDEXER_NAME,
                 ProjectUtils::getSpecBindingNodes));
         informer.addIndexers(Map.of(
-                IndexerConstants.IMAGE_NAMESPACE_NAME_TO_PROJECTS_INDEXER_NAME,
-                ProjectUtils::getSpecBindingImageNamespaces));
+                IndexerConstants.IMAGE_HUB_NAME_TO_PROJECTS_INDEXER_NAME,
+                ProjectUtils::getSpecBindingImageHubs));
     }
 
     private void registerAipubUserInformer(SharedInformerFactory informerFactory) {
@@ -112,10 +112,10 @@ public class GlobalSharedInformerFactoryProvider {
                 NodeGroupUtils::getSpecNodes));
     }
 
-    private void registerImageNamespaceInformer(SharedInformerFactory informerFactory) {
+    private void registerImageHubInformer(SharedInformerFactory informerFactory) {
         informerFactory.sharedIndexInformerFor(
-                this.k8sApiProvider.getImageNamespaceApi(),
-                V1alpha1ImageNamespace.class,
+                this.k8sApiProvider.getImageHubApi(),
+                V1alpha1ImageHub.class,
                 DEFAULT_RESYNC_PERIOD);
     }
 
