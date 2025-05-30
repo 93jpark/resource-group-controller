@@ -538,6 +538,164 @@ public class ReconciliationService {
         return reconciled;
     }
 
+    public List<V1alpha1ProjectMember> reconcileProjectMembers(List<V1alpha1AipubUser> boundUsers, V1alpha1Project project) {
+        Map<String, String> userMap = new HashMap<>();
+
+        boundUsers.forEach(au -> {
+            String name = K8sObjectUtils.getName(au);
+            if (AipubUserUtils.getSpecId(au).isPresent()) {
+                String id = AipubUserUtils.getSpecId(au).get();
+                userMap.put(name, id);
+            }
+        });
+
+        List<V1alpha1ProjectMember> membersWithId = ProjectMemberUtils.getAipubUserMembersWithId(project);
+        List<V1alpha1ProjectMember> validMembers = membersWithId.stream().map(member -> {
+                    String id = userMap.get(member.getAipubUser());
+                    if (id != null && (member.getId() != null && member.getId().equals(id))) {
+                        V1alpha1ProjectMember copied = ProjectMemberUtils.copyOf(member);
+                        copied.setId(id);
+                        return copied;
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull).toList();
+
+        List<V1alpha1ProjectMember> membersWithoutId = ProjectMemberUtils.getAipubUserMembersWithoutId(project);
+        List<V1alpha1ProjectMember> updatedNewMembers = membersWithoutId.stream()
+                .map(member -> {
+                    String name = member.getAipubUser();
+                    String id = userMap.get(name);
+                    if (id != null) {
+                        V1alpha1ProjectMember copied = ProjectMemberUtils.copyOf(member);
+                        copied.setId(id);
+                        return copied;
+                    }
+                    return member;
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        Set<V1alpha1ProjectMember> result = new HashSet<>();
+        result.addAll(membersWithId);
+        result.addAll(updatedNewMembers);
+
+        return new ArrayList<>(result);
+    }
+
+    public List<V1alpha1AipubUser> reconcileBoundAipubUsers(List<V1alpha1AipubUser> boundUsers, List<V1alpha1ProjectMember> boundMembers) {
+        Map<String, String> userMap = new HashMap<>();
+
+        boundMembers.forEach(pm -> {
+            String name = pm.getAipubUser();
+            if (pm.getId() != null) {
+                userMap.put(name, pm.getId());
+            }
+        });
+
+        List<V1alpha1AipubUser> reconciledAipubUsers = boundUsers.stream()
+                .map(au -> {
+                    String id = userMap.get(K8sObjectUtils.getName(au));
+                    if (AipubUserUtils.getSpecId(au).isPresent()) {
+                        String userId = AipubUserUtils.getSpecId(au).get();
+                        if (userId.equals(id)) {
+                            return au;
+                        }
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        return reconciledAipubUsers;
+    }
+
+    public List<V1alpha1ProjectImageHub> reconcileProjectImageHubs(List<V1alpha1ImageHub> boundHubs, V1alpha1Project project) {
+        Map<String, String> hubMap = new HashMap<>();
+
+        boundHubs.forEach(ih -> {
+            String name = K8sObjectUtils.getName(ih);
+            if (!ImageHubUtils.getSpecId(ih).isBlank()) {
+                String id = ImageHubUtils.getSpecId(ih);
+                hubMap.put(name, id);
+            }
+        });
+
+        List<V1alpha1ProjectImageHub> hubsWithId = ProjectImageHubUtils.getProjectImageHubsWithId(project);
+        List<V1alpha1ProjectImageHub> validHubs = hubsWithId.stream().map(hub -> {
+                    String id = hubMap.get(hub.getName());
+                    if (id != null && (hub.getId() != null && hub.getId().equals(id))) {
+                        return hub;
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull).toList();
+
+        List<V1alpha1ProjectImageHub> hubsWithoutId = new ArrayList<>(ProjectImageHubUtils.getProjectImageHubsWithoutId(project));
+        List<V1alpha1ProjectImageHub> updatedNewHubs = hubsWithoutId.stream()
+                .map(ph -> {
+                    String name = ph.getName();
+                    String id = hubMap.get(name);
+                    if (id != null) {
+                        V1alpha1ProjectImageHub copied = ProjectImageHubUtils.copyOf(ph);
+                        copied.setId(id);
+                        return copied;
+                    }
+                    return ph;
+                })
+                .filter(Objects::nonNull)
+                .toList();
+
+        Set<V1alpha1ProjectImageHub> result = new HashSet<>();
+        result.addAll(hubsWithId);
+        result.addAll(updatedNewHubs);
+
+        return new ArrayList<>(result);
+    }
+
+    public List<V1alpha1ImageHub> reconcileBoundImageHubs(List<V1alpha1ImageHub> boundImageHubs, List<V1alpha1ProjectImageHub> boundProjectHubs) {
+        Map<String, String> hubMap = new HashMap<>();
+
+        boundProjectHubs.forEach(ph -> {
+            String name = ph.getName();
+            hubMap.put(name, ph.getId());
+        });
+
+        List<V1alpha1ImageHub> reconciledImageHubs = boundImageHubs.stream()
+                .map(ih -> {
+                    String id = hubMap.get(K8sObjectUtils.getName(ih));
+                    String hubId = ImageHubUtils.getSpecId(ih);
+                    if (id == null || hubId.equals(id)) {
+                        return ih;
+                    }
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        return reconciledImageHubs;
+    }
+
+    public V1alpha1ProjectSpec reconcileProjectSpec(
+            V1alpha1Project project,
+            List<V1alpha1ProjectMember> reconciledMembers,
+            List<V1alpha1ProjectImageHub> reconciledHubs) {
+        V1alpha1ProjectSpec reconciledSpec = new V1alpha1ProjectSpec();
+
+        V1alpha1ProjectBinding reconciledBinding = new V1alpha1ProjectBinding();
+        reconciledBinding.setNodeGroups(project.getSpec().getBinding().getNodeGroups());
+        reconciledBinding.setNodes(project.getSpec().getBinding().getNodes());
+        reconciledBinding.setImageHubs(reconciledHubs);
+
+        reconciledSpec.setBinding(reconciledBinding);
+        reconciledSpec.setMembers(reconciledMembers);
+        reconciledSpec.setQuota(ProjectUtils.getSpecQuota(project).orElse(null));
+
+        return reconciledSpec;
+    }
+
     public V1alpha1ProjectStatus reconcileProjectStatus(
             V1alpha1Project existing,
             List<V1alpha1AipubUser> boundAipubUsers,

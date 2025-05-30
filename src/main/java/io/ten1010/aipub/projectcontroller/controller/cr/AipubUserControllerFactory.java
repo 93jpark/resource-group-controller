@@ -43,7 +43,8 @@ public class AipubUserControllerFactory implements ControllerFactory {
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1Project.class)::hasSynced)
                 .watch(this::createAipubUserWatch)
                 .watch(this::createProjectSpecWatch)
-                .watch(this::createProjectStatusWatch)
+                .watch(this::createProjectStatusBindingImageHubsWatch)
+                .watch(this::createProjectStatusBindingAipubUsersWatch)
                 .withReconciler(new AipubUserReconciler(this.sharedInformerFactory, this.k8sApiProvider, this.reconciliationService))
                 .build();
     }
@@ -61,9 +62,16 @@ public class AipubUserControllerFactory implements ControllerFactory {
         return watch;
     }
 
-    private ControllerWatch<V1alpha1Project> createProjectStatusWatch(WorkQueue<Request> workQueue) {
+    private ControllerWatch<V1alpha1Project> createProjectStatusBindingImageHubsWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue, V1alpha1Project.class);
         watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectStatusAllBoundImageHubsFieldFilter());
+        watch.setRequestBuilder(this.requestBuilderFactory.projectToBoundAipubUsers());
+        return watch;
+    }
+
+    private ControllerWatch<V1alpha1Project> createProjectStatusBindingAipubUsersWatch(WorkQueue<Request> workQueue) {
+        DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue, V1alpha1Project.class);
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectStatusAllBoundAipubUsersFieldFilter());
         watch.setRequestBuilder(this.requestBuilderFactory.projectToBoundAipubUsers());
         return watch;
     }

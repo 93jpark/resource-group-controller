@@ -19,7 +19,7 @@ import io.ten1010.common.jsonpatch.dto.JsonPatchOperation;
 import okhttp3.Call;
 import org.jspecify.annotations.Nullable;
 
-public class StatusPatchHelper<T extends KubernetesObject> {
+public class SpecPatchHelper<T extends KubernetesObject> {
 
     private final ApiClient apiClient;
     private final CustomObjectsApi customObjectsApi;
@@ -27,7 +27,7 @@ public class StatusPatchHelper<T extends KubernetesObject> {
     private final String resourcePlural;
     private final ObjectMapper mapper;
 
-    public StatusPatchHelper(ApiClient apiClient, K8sObjectType<T> resourceType, String resourcePlural) {
+    public SpecPatchHelper(ApiClient apiClient, K8sObjectType<T> resourceType, String resourcePlural) {
         this.apiClient = apiClient;
         this.customObjectsApi = new CustomObjectsApi(apiClient);
         this.resourceType = resourceType;
@@ -35,7 +35,7 @@ public class StatusPatchHelper<T extends KubernetesObject> {
         this.mapper = new ObjectMapperFactory().createObjectMapper();
     }
 
-    public KubernetesObject patchStatus(@Nullable String namespace, String name, Object status) throws ApiException {
+    public KubernetesObject patchSpec(@Nullable String namespace, String name, Object status) throws ApiException {
         return PatchUtils.patch(
                 this.resourceType.getObjClass(),
                 () -> buildCall(namespace, name, status),
@@ -56,12 +56,12 @@ public class StatusPatchHelper<T extends KubernetesObject> {
                 .buildCall(null);
     }
 
-    private V1Patch buildPatch(Object status) {
-        JsonNode statusNode = this.mapper.valueToTree(status);
+    private V1Patch buildPatch(Object spec) {
+        JsonNode specNode = this.mapper.valueToTree(spec);
         JsonPatchOperation op = new JsonPatchOperationBuilder()
                 .replace()
-                .setPath("/status")
-                .setValue(statusNode)
+                .setPath("/spec")
+                .setValue(specNode)
                 .build();
         JsonPatch patch = new JsonPatchBuilder()
                 .addToOperations(op)

@@ -14,7 +14,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1AipubUserStatus
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
-import io.ten1010.aipub.projectcontroller.domain.k8s.util.StatusPatchHelper;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.ObjectPatchHelper;
 
 import java.util.List;
 import java.util.Objects;
@@ -26,7 +26,7 @@ public class AipubUserReconciler extends AbstractReconciler {
     private final ReconciliationService reconciliationService;
     private final Indexer<V1alpha1AipubUser> aipubUserIndexer;
     private final BoundObjectResolver boundObjectResolver;
-    private final StatusPatchHelper<V1alpha1AipubUser> statusPatchHelper;
+    private final ObjectPatchHelper<V1alpha1AipubUser> objectPatchHelper;
 
     public AipubUserReconciler(
             SharedInformerFactory sharedInformerFactory,
@@ -38,7 +38,7 @@ public class AipubUserReconciler extends AbstractReconciler {
                 .getExistingSharedIndexInformer(V1alpha1AipubUser.class)
                 .getIndexer();
         this.boundObjectResolver = new BoundObjectResolver(sharedInformerFactory);
-        this.statusPatchHelper = new StatusPatchHelper<>(
+        this.objectPatchHelper = new ObjectPatchHelper<>(
                 k8sApiProvider.getApiClient(),
                 K8sObjectTypeConstants.AIPUB_USER_V1ALPHA1,
                 ProjectApiConstants.AIPUB_USER_RESOURCE_PLURAL);
@@ -77,7 +77,7 @@ public class AipubUserReconciler extends AbstractReconciler {
 
     private void updateStatus(V1alpha1AipubUser aipubUser) throws ApiException {
         Objects.requireNonNull(aipubUser.getStatus());
-        this.statusPatchHelper.patchStatus(null, K8sObjectUtils.getName(aipubUser), aipubUser.getStatus());
+        this.objectPatchHelper.patchStatus(null, K8sObjectUtils.getName(aipubUser), aipubUser.getStatus());
     }
 
 }

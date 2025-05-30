@@ -3,6 +3,7 @@ package io.ten1010.aipub.projectcontroller.configuration;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.util.ClientBuilder;
 import io.kubernetes.client.util.KubeConfig;
+import io.ten1010.aipub.projectcontroller.domain.aipubbackend.UserService;
 import io.ten1010.aipub.projectcontroller.domain.k8s.DockerConfigJsonResolver;
 import io.ten1010.aipub.projectcontroller.domain.k8s.K8sApiProvider;
 import io.ten1010.aipub.projectcontroller.domain.k8s.ReconciliationService;
@@ -47,8 +48,8 @@ public class DomainConfiguration {
     }
 
     @Bean
-    public ReconciliationService reconciliationService(SubjectResolver subjectResolver, DockerConfigJsonResolver dockerConfigJsonResolver) {
-        return new ReconciliationService(subjectResolver, dockerConfigJsonResolver);
+    public ReconciliationService reconciliationService(UserService userService, SubjectResolver subjectResolver, DockerConfigJsonResolver dockerConfigJsonResolver) {
+        return new ReconciliationService(userService, subjectResolver, dockerConfigJsonResolver);
     }
 
 }

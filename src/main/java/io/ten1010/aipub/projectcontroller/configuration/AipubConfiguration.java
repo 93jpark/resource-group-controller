@@ -19,6 +19,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @Configuration
 @Getter
@@ -48,6 +49,15 @@ public class AipubConfiguration {
         } else {
             this.aipubBackendClient = null;
         }
+    }
+
+    @Bean
+    public UserService userService() {
+        if (this.aipubEnabled) {
+            Objects.requireNonNull(this.aipubBackendClient);
+            return new UserServiceImpl(this.aipubBackendClient);
+        }
+        return (username) -> Optional.empty();
     }
 
     @Bean

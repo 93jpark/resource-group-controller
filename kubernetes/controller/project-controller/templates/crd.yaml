@@ -50,6 +50,8 @@ spec:
                             type: string
                       role:
                         type: string
+                      id:
+                        type: string
                 quota:
                   type: object
                   properties:
@@ -73,7 +75,12 @@ spec:
                       type: array
                       default: [ ]
                       items:
-                        type: string
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
             status:
               type: object
               properties:

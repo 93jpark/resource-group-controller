@@ -85,7 +85,7 @@ public abstract class ProjectUtils {
                 .orElseGet(List::of);
     }
 
-    public static List<String> getSpecBindingImageHubs(V1alpha1Project object) {
+    public static List<V1alpha1ProjectImageHub> getSpecBindingImageHubs(V1alpha1Project object) {
         Optional<V1alpha1ProjectBinding> bindingOpt = getSpecBinding(object);
         return bindingOpt
                 .map(V1alpha1ProjectBinding::getImageHubs)

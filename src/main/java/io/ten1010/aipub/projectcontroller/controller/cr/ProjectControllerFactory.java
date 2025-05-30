@@ -53,7 +53,7 @@ public class ProjectControllerFactory implements ControllerFactory {
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1NodeGroup.class)::hasSynced)
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1Node.class)::hasSynced)
                 .withReadyFunc(this.sharedInformerFactory.getExistingSharedIndexInformer(V1alpha1ImageHub.class)::hasSynced)
-                .watch(this::createProjectWatch)
+                .watch(this::createProjectSpecWatch)
                 .watch(this::createNamespaceWatch)
                 .watch(this::createAipubUserWatch)
                 .watch(this::createResourceQuotaWatch)
@@ -64,9 +64,9 @@ public class ProjectControllerFactory implements ControllerFactory {
                 .build();
     }
 
-    private ControllerWatch<V1alpha1Project> createProjectWatch(WorkQueue<Request> workQueue) {
+    private ControllerWatch<V1alpha1Project> createProjectSpecWatch(WorkQueue<Request> workQueue) {
         DefaultControllerWatch<V1alpha1Project> watch = new DefaultControllerWatch<>(workQueue, V1alpha1Project.class);
-        watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecBindingFieldFilter());
+        watch.setOnUpdateFilter(this.onUpdateFilterFactory.projectSpecFieldFilter());
         return watch;
     }
 

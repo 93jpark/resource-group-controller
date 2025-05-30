@@ -13,6 +13,6 @@ public class V1alpha1ProjectBinding {
     @Nullable
     private List<String> nodeGroups;
     @Nullable
-    private List<String> imageHubs;
+    private List<V1alpha1ProjectImageHub> imageHubs;
 
 }

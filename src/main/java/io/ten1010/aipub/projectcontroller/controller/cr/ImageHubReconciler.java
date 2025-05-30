@@ -14,7 +14,7 @@ import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHub;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1ImageHubStatus;
 import io.ten1010.aipub.projectcontroller.domain.k8s.dto.V1alpha1Project;
 import io.ten1010.aipub.projectcontroller.domain.k8s.util.K8sObjectUtils;
-import io.ten1010.aipub.projectcontroller.domain.k8s.util.StatusPatchHelper;
+import io.ten1010.aipub.projectcontroller.domain.k8s.util.ObjectPatchHelper;
 
 import java.util.List;
 import java.util.Objects;
@@ -26,7 +26,7 @@ public class ImageHubReconciler extends AbstractReconciler {
     private final ReconciliationService reconciliationService;
     private final Indexer<V1alpha1ImageHub> imageHubIndexer;
     private final BoundObjectResolver boundObjectResolver;
-    private final StatusPatchHelper<V1alpha1ImageHub> statusPatchHelper;
+    private final ObjectPatchHelper<V1alpha1ImageHub> objectPatchHelper;
 
     public ImageHubReconciler(
             SharedInformerFactory sharedInformerFactory,
@@ -38,7 +38,7 @@ public class ImageHubReconciler extends AbstractReconciler {
                 .getExistingSharedIndexInformer(V1alpha1ImageHub.class)
                 .getIndexer();
         this.boundObjectResolver = new BoundObjectResolver(sharedInformerFactory);
-        this.statusPatchHelper = new StatusPatchHelper<>(
+        this.objectPatchHelper = new ObjectPatchHelper<>(
                 k8sApiProvider.getApiClient(),
                 K8sObjectTypeConstants.IMAGE_HUB_V1ALPHA1,
                 ProjectApiConstants.IMAGE_HUB_RESOURCE_PLURAL);
@@ -54,7 +54,7 @@ public class ImageHubReconciler extends AbstractReconciler {
         V1alpha1ImageHub imageHub = imageHubOpt.get();
 
         List<V1alpha1Project> boundProjects = this.boundObjectResolver.getAllBoundProjects(imageHub);
-        List<V1alpha1AipubUser> boundAipubUsers = this.boundObjectResolver.getAllBoundAipubUsers(imageHub);
+        List<V1alpha1AipubUser> boundAipubUsers = this.boundObjectResolver.getAllBoundAipubUsers(imageHub); // spec에 있는 모든 유저 가져옴
         V1alpha1ImageHubStatus reconciledStatus = this.reconciliationService.reconcileImageHubStatus(imageHub, boundProjects, boundAipubUsers);
 
         return reconcileExistingImageHub(imageHubOpt.get(), reconciledStatus);
@@ -77,7 +77,7 @@ public class ImageHubReconciler extends AbstractReconciler {
 
     private void updateStatus(V1alpha1ImageHub imageHub) throws ApiException {
         Objects.requireNonNull(imageHub.getStatus());
-        this.statusPatchHelper.patchStatus(null, K8sObjectUtils.getName(imageHub), imageHub.getStatus());
+        this.objectPatchHelper.patchStatus(null, K8sObjectUtils.getName(imageHub), imageHub.getStatus());
     }
 
 }

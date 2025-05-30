@@ -6,15 +6,21 @@ spec:
   members:
     - aipubUser: au1
       role: project-manager
+      id: "9"
+    - aipubUser: au1
+      role: project-manager
+      id: "8"
+    - aipubUser: au1
+      role: project-manager
     - aipubUser: au2
       role: project-developer
   quota:
-    pvcStorage: 500Gi
+    pvcStorage:
   binding:
     nodes:
-      - node1
+      - minikube
     nodeGroups:
-      - ng1
+      # - ng1
     imageHubs:
       - img-hub1
 ---

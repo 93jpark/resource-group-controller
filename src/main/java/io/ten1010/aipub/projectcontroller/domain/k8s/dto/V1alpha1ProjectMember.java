@@ -13,5 +13,7 @@ public class V1alpha1ProjectMember {
     private RbacV1Subject subject;
     @Nullable
     private String role;
+    @Nullable
+    private String id;
 
 }

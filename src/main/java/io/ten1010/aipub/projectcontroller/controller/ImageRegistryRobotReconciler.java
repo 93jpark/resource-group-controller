@@ -114,7 +114,8 @@ public class ImageRegistryRobotReconciler extends AbstractReconciler {
 
     private List<ImageRegistryRobotPermission> createPermissions(V1alpha1Project project) {
         return ProjectUtils.getSpecBindingImageHubs(project).stream()
-                .map(e -> this.imageHubIndexer.getByKey(this.keyResolver.resolveKey(e)))
+                .filter(e -> Objects.nonNull(e.getName()))
+                .map(e -> this.imageHubIndexer.getByKey(this.keyResolver.resolveKey(e.getName())))
                 .filter(Objects::nonNull)
                 .map(ImageRegistryRobotReconciler::createPermission)
                 .toList();

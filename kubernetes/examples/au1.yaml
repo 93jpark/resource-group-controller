@@ -3,5 +3,5 @@ kind: AipubUser
 metadata:
   name: au1
 spec:
-  id: "1"
+  id: "something"
 ---
